@@ -4,7 +4,7 @@ import socket
 def main():
     server_socket, conn = startServer()
 
-    #initial position
+    #initial position of the player (middle of board)
     data = 4
 
     #send and recieve messages from the client
@@ -46,11 +46,13 @@ def startServer():
 
     return server_socket, conn
 
+
+#function to send a message to the client
 def sendMessage(conn, message):
     conn.sendall(message.encode())
 
-#returns a string that contains the columns of the gameboard so that it can be
-#sent through the socket
+
+#returns a string that contains the gameboard with the player on it
 def printGameBoard(movePosition):
     boardString = ""
     characterPositons = [[' ' for _ in range(3)] for _ in range(3)]
