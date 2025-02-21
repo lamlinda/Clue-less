@@ -20,6 +20,7 @@ def main():
             if not data:
                 print("Client disconnected.")
                 break  # Exit loop if the client closes the connection
+            print("Client:", data.decode())
 
     except ConnectionAbortedError:
         print("Connection was closed by the client.")
