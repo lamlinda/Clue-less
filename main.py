@@ -18,7 +18,7 @@ with app.app_context():
 
 @app.route('/test')
 def test():
-    return render_template('test.html')
+    return render_template('webLayout.html')
 
 
 

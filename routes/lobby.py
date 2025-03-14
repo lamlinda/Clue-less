@@ -204,6 +204,8 @@ def next_turn(data):
         'valid_moves': valid_moves
     }, room=lobby_id)
 
+#----------------------MOVE THESE TO ANOTHER FILE FOR HANDLING PLAYER ACTIONS--------------------------------
+
 
 @socketio.on('make_move')
 def make_move(data):
@@ -515,3 +517,6 @@ def get_player_cards(data):
     emit('my_cards', {
         'cards': player_cards
     })
+
+
+    #------------------------------------------------------------------------------------------
