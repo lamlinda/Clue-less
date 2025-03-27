@@ -4,8 +4,6 @@
  * 
  */
 
-var socket = io();
-
 // Listen for 'game_started' event
 socket.on('game_started', function(data) {
     console.log('Game started:', data);

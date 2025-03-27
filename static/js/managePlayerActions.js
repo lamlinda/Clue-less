@@ -7,9 +7,6 @@
  * 
  */
 
-// Connect to Socket.IO (it will connect to the same host and port that served this page)
-var socket = io();
-
 // Listen for 'move_update' event
 socket.on('move_update', function(data) {
     console.log('Move update:', data);
