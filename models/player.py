@@ -17,6 +17,7 @@ class Player(db.Model):
     lobby_id = db.Column(db.String(36), db.ForeignKey('lobby.id'), nullable=True)
     name = db.Column(db.String(50), nullable=False)
     character = db.Column(db.String(50), nullable=True)
+    cards = db.Column(db.Text, nullable=False, default=json.dumps([]))  # Player's cards
     eliminated = db.Column(db.Boolean, default=False)  # If player made incorrect accusation
 
     def __init__(self, name, lobby_id=None):
@@ -25,6 +26,8 @@ class Player(db.Model):
         self.lobby_id = lobby_id
         self.character = None
         self.eliminated = False
+        self.cards = json.dumps([])
 
     def __repr__(self):
         return f"Player('{self.id}', '{self.name}')"
+    
