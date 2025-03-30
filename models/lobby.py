@@ -40,12 +40,13 @@ class Lobby(db.Model):
         self.board_id = None  # Initially no board is assigned
         
         self.characters = json.dumps({
-            'Miss Scarlet': {'position': 'start', 'type': 'starter', 'selected': False},
-            'Col. Mustard': {'position': 'start', 'type': 'starter', 'selected': False},
-            'Mrs. White': {'position': 'start', 'type': 'starter', 'selected': False},
-            'Mr. Green': {'position': 'start', 'type': 'starter', 'selected': False},
-            'Mrs. Peacock': {'position': 'start', 'type': 'starter', 'selected': False},
-            'Prof. Plum': {'position': 'start', 'type': 'starter', 'selected': False}
+            'Miss Scarlet': {'name': 'Miss Scarlet', 'position': 'start', 'type': 'starter', 'selected': False},
+            'Col. Mustard': {'name': 'Col. Mustard', 'position': 'start', 'type': 'starter', 'selected': False},
+            'Mrs. White': {'name': 'Mrs. White', 'position': 'start', 'type': 'starter', 'selected': False},
+            'Mr. Green': {'name': 'Mr. Green', 'position': 'start', 'type': 'starter', 'selected': False},
+            'Mrs. Peacock': {'name': 'Mrs. Peacock', 'position': 'start', 'type': 'starter', 'selected': False},
+            'Prof. Plum': {'name': 'Prof. Plum', 'position': 'start', 'type': 'starter', 'selected': False}
+
         })
 
 
@@ -62,12 +63,17 @@ class Lobby(db.Model):
     def initialize_game(self):
         """Initialize the game state with cards and board"""
         # Initialize board
+        
+
+        self.randomize_turn_order()
+        
         self.board_id = str(Board(self.id).get_id())
 
         # Initialize cards
         card_obj = Cards()
 
         self.solution = json.dumps(card_obj.get_solution())
+
 
         # deal cards to players
         player_cards = card_obj.deal_card_to_all_players(self.players)

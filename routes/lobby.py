@@ -124,36 +124,44 @@ def start_game(data):
         })
         return
 
-    # Change lobby status and randomize turn order
-    lobby.status = 'in_progress'
-    lobby.randomize_turn_order()
-
     # Initialize the game board and cards
-    board_state, game_state = lobby.initialize_game()
+    lobby.initialize_game()
 
     db.session.commit()
+
 
     # Get the player who has the first turn
     current_player = lobby.players[lobby.current_turn_idx]
 
     # Get all player positions to broadcast
+    all_player = lobby.getAllPlayers_state()
+
     player_positions = []
-    for player in lobby.players:
-        player_info = board_state['players'].get(player.id, {})
-        player_positions.append({
-            'player_id': player.id,
-            'name': player.name,
-            'character': player_info.get('character', 'Unknown'),
-            'position': player_info.get('position', 'Unknown'),
-            'position_type': player_info.get('position_type', 'Unknown')
-        })
+    for player in all_player:
+
+        print(player)
+
+        # Get the player information from the board state
+
+        # convert string to dict
+        player['character'] = json.loads(player['character'])
+
+        player_info = {
+            'player_id': player['id'],
+            'name': player['name'],
+            'character': player['character'].get('name', 'Unknown'),
+            'position': player['character'].get('position', 'Unknown'),
+            'position_type': player['character'].get('type', 'Unknown')
+        }
+        player_positions.append(player_info)
+
 
     # Get valid moves for the current player
-    valid_moves = lobby.get_valid_moves(current_player.id)
+    valid_moves = lobby.show_available_moves(current_player.id)
 
     # Send individual cards to each player
     for player in lobby.players:
-        player_cards = game_state['player_cards'].get(player.id, [])
+        player_cards = json.loads(player.cards)
         emit('cards_dealt', {
             'cards': player_cards
         }, room=player.id)
