@@ -4,8 +4,9 @@ import random
 import string
 import json
 
-from models import Board, Cards, Player
-
+from .board import Board
+from .player import Player
+from .card import Cards
 
 def generate_uuid():
     return str(uuid.uuid4())
@@ -61,7 +62,7 @@ class Lobby(db.Model):
     def initialize_game(self):
         """Initialize the game state with cards and board"""
         # Initialize board
-        self.board_id = str(Board(self.id).id)
+        self.board_id = str(Board(self.id).get_id())
 
         # Initialize cards
         card_obj = Cards()
@@ -74,7 +75,12 @@ class Lobby(db.Model):
             player.cards = json.dumps(player_cards[player.id])
             player.is_ready = True
             db.session.commit()
-    
+
+
+        # Randomize the characters for the players
+        self.random_character()
+
+
         # Set the game status to 'in_progress'
         self.status = 'in_progress'
         db.session.commit()
@@ -83,6 +89,10 @@ class Lobby(db.Model):
     def get_board(self):
         """Get the board object associated with this lobby"""
         return Board.query.filter_by(id=self.board_id).first()
+    
+    def getAllPlayers_state(self):
+        """Get the state of all players in the lobby"""
+        return [player._get_player_state() for player in self.players]
     
 
     def change_character(self, player_id, character_name):
@@ -150,13 +160,13 @@ class Lobby(db.Model):
         # Check if it's a valid move or a valid accusation from 'start'
         valid_move = (
             board.is_valid_move(player.id, new_location)
-            or (player.character.position == 'start' and board.is_valid_accusation(player.id, new_location))
+            or (player.character.position == 'start')
         )
 
         if valid_move:
             player.character.position = new_location
             # Update the player's location on the board
-            board.update_player_location(player.id, new_location)
+            board._move_player(player.id, new_location)
             # Update the player's character position
             db.session.commit()
             return True
@@ -164,4 +174,22 @@ class Lobby(db.Model):
         # If neither condition is satisfied, it's invalid
         raise ValueError("Invalid move")
 
+
+    def random_character(self):
+        """Randomize the characters for the players."""
+        characters = json.loads(self.characters)
+        available_characters = [name for name, details in characters.items() if not details['selected']]
+        
+        if len(available_characters) < len(self.players):
+            raise ValueError("Not enough characters available for all players.")
+
+        for player in self.players:
+            random_character = random.choice(available_characters)
+            available_characters.remove(random_character)
+            characters[random_character]['selected'] = True
+            player.character = json.dumps(characters[random_character])
+        
+        self.characters = json.dumps(characters)
+        db.session.commit()
+        return characters   
 

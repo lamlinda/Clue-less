@@ -57,7 +57,9 @@ class Board(db.Model):
                 'kitchen': 'study'
             })  
         
-    
+    def get_id(self):
+        return self.id
+
     # Get all the rooms in the board
     def get_rooms(self):
         # Load the rooms from JSON
