@@ -31,3 +31,13 @@ class Player(db.Model):
     def __repr__(self):
         return f"Player('{self.id}', '{self.name}')"
     
+
+    def _get_player_state(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'character': self.character,
+            'cards': json.loads(self.cards),
+            'eliminated': self.eliminated
+        }
+    

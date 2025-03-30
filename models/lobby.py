@@ -39,12 +39,12 @@ class Lobby(db.Model):
         self.board_id = None  # Initially no board is assigned
         
         self.characters = json.dumps({
-            'Miss Scarlet': {'position': 'scarlet_start', 'type': 'starter', 'selected': False},
-            'Col. Mustard': {'position': 'mustard_start', 'type': 'starter', 'selected': False},
-            'Mrs. White': {'position': 'white_start', 'type': 'starter', 'selected': False},
-            'Mr. Green': {'position': 'green_start', 'type': 'starter', 'selected': False},
-            'Mrs. Peacock': {'position': 'peacock_start', 'type': 'starter', 'selected': False},
-            'Prof. Plum': {'position': 'plum_start', 'type': 'starter', 'selected': False}
+            'Miss Scarlet': {'position': 'start', 'type': 'starter', 'selected': False},
+            'Col. Mustard': {'position': 'start', 'type': 'starter', 'selected': False},
+            'Mrs. White': {'position': 'start', 'type': 'starter', 'selected': False},
+            'Mr. Green': {'position': 'start', 'type': 'starter', 'selected': False},
+            'Mrs. Peacock': {'position': 'start', 'type': 'starter', 'selected': False},
+            'Prof. Plum': {'position': 'start', 'type': 'starter', 'selected': False}
         })
 
 
@@ -94,7 +94,7 @@ class Lobby(db.Model):
                 if player.id == player_id:
                     if player.character in characters:
                         characters[player.character]['selected'] = False
-                    player.character = character_name
+                    player.character = json.dumps(characters[character_name])
                     characters[character_name]['selected'] = True
                     break
         else:
@@ -121,11 +121,47 @@ class Lobby(db.Model):
                 # Get adjacent rooms for the hallway
                 adjacent_rooms = board._get_adjacent_rooms_for_hallway(location.location)
                 return adjacent_rooms
-            elif
-            
+            elif player.character.position == 'start':
+                # If player is at start, limited to starting positions
+                adjacency_map = {
+                    'Miss Scarlet': 'hall_lounge',
+                    'Col. Mustard': 'lounge_dining',
+                    'Mrs. White': 'ballroom_kitchen',
+                    'Mr. Green': 'conservatory_ballroom',
+                    'Mrs. Peacock': 'library_conservatory',
+                    'Prof. Plum': 'study_library'
+                }
+                if player.character.name in adjacency_map:
+                    return [adjacency_map[player.character.name]]    
 
+            
         return None
 
-    
+    def player_move(self, player_id, new_location):
+        """Move a player to a new location."""
+        board = self.get_board()
+        if not board:
+            return False
+
+        player = Player.query.filter_by(id=player_id).first()
+        if not player:
+            return False
+
+        # Check if it's a valid move or a valid accusation from 'start'
+        valid_move = (
+            board.is_valid_move(player.id, new_location)
+            or (player.character.position == 'start' and board.is_valid_accusation(player.id, new_location))
+        )
+
+        if valid_move:
+            player.character.position = new_location
+            # Update the player's location on the board
+            board.update_player_location(player.id, new_location)
+            # Update the player's character position
+            db.session.commit()
+            return True
+
+        # If neither condition is satisfied, it's invalid
+        raise ValueError("Invalid move")
 
 
