@@ -1108,7 +1108,7 @@
       const moveOptionsContainer = document.getElementById('moveOptionsContainer');
       moveOptionsContainer.innerHTML = '';
 
-      if (!moves || moves.length === 0) {
+      if (!moves) {
         moveOptionsContainer.innerHTML = '<p>No valid moves available.</p>';
         document.getElementById('moveOptions').style.display = 'block';
         return;
@@ -1120,13 +1120,8 @@
         moveButton.classList.add('move-option-btn');
 
         // Format button text based on move type
-        let buttonText = `Move to ${formatPositionName(move.position)}`;
-        if (move.via_secret_passage) {
-          buttonText += ' (via secret passage)';
-        } else if (move.stay_in_room) {
-          buttonText = 'Stay in room and make suggestion';
-        }
-
+        let buttonText = `Move to ${formatPositionName(move)}`;
+        
         moveButton.textContent = buttonText;
 
         // Add click event to make the move

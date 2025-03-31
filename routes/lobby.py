@@ -138,13 +138,9 @@ def start_game(data):
 
     player_positions = []
     for player in all_player:
-
-        print(player)
-
         # Get the player information from the board state
 
         # convert string to dict
-        player['character'] = json.loads(player['character'])
 
         player_info = {
             'player_id': player['id'],
@@ -158,6 +154,8 @@ def start_game(data):
 
     # Get valid moves for the current player
     valid_moves = lobby.show_available_moves(current_player.id)
+
+    print(f"Valid moves for {current_player.name}: {valid_moves}")
 
     # Send individual cards to each player
     for player in lobby.players:
