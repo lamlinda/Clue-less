@@ -236,12 +236,13 @@ def make_move(data):
     # Get current board state
     board= lobby.get_board()
 
+    print(move)
+
     # Verify the move is valid
 
     if not board._is_valid_move(player_id, move):
         emit('error', {'message': 'Invalid move', 'code': 'INVALID_MOVE'})
         return
-
 
     # Make the move
 
@@ -270,9 +271,8 @@ def make_move(data):
     emit('move_update', {
         'player_id': player_id,
         'player_name': current_player.name,
-        'new_position': move['position'],
+        'new_position': move,
         'player_positions': player_positions,
-        'can_suggest': move.get('can_suggest', False)
     }, room=lobby_id)
 
 

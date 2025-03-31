@@ -4,6 +4,8 @@ import random
 import string
 import json
 
+from .player import Player
+
 
 class Board(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -116,30 +118,42 @@ class Board(db.Model):
         return None
 
     def _is_valid_move(self, player_id, destination):
-        # Check if the destination is a valid room or hallway
+        # Fetch the player and state
+        player_state = Player.query.filter_by(id=player_id).first()._get_player_state()
+        hallways = json.loads(self.hallways)
+
+        if not player_state:
+            return False
+
+        current_position = player_state["character"]["position"]
         current_location = self._find_player_on_board(player_id)
 
-        if current_location is None:
+        # 1. Player is not yet on the board (current_location is None)
+        #    - If player is at "start", allow move only if the hallway is unoccupied.
+
+        if current_position == "start":
+            # If destination is a hallway, check if it's unoccupied
+            return destination in hallways and hallways[destination] is None 
+        # 2. If destination hallway is occupied, deny
+        if destination in hallways and hallways[destination] is not None:
             return False
 
-        current_type = current_location["type"]
-        current_location = current_location["location"]
 
-        # If the destination is a hallway, check if it's occupied
-        if self.hallways[destination]:
-            return False
+        # 3. Depending on location type (room or hallway), check valid adjacency
+        location_type = current_location["type"]
+        location_name = current_location["location"]
 
-        # If the player is in a room, they can only move to adjacent hallways
-        # Check if the destination is a room or hallway
-        if current_type == "room":
-            adjacent_hallways = self._get_adjacent_hallways_for_room(current_location)
-            return destination in adjacent_hallways
-        # If the player is in a hallway, they can only move to adjacent rooms
-        elif current_type == "hallway":
-            adjacent_rooms = self._get_adjacent_rooms_for_hallway(current_location)
-            return destination in adjacent_rooms
-        else:
-            return False
+        # If in a room, must move to an adjacent hallway
+        if location_type == "room":
+            return destination in self._get_adjacent_hallways_for_room(location_name)
+
+        # If in a hallway, must move to an adjacent room
+        if location_type == "hallway":
+            return destination in self._get_adjacent_rooms_for_hallway(location_name)
+
+        # Otherwise, not valid
+        return False
+
 
     def _move_player(self, player_id, new_location):
         rooms = json.loads(self.rooms)

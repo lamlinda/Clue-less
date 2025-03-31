@@ -200,14 +200,14 @@ class Lobby(db.Model):
         if not board:
             return False
 
-        player = Player.query.filter_by(id=player_id).first().get_player_state()
+        player = Player.query.filter_by(id=player_id).first()._get_player_state()
 
         print(player)  # For debugging
         if not player:
             return False
 
         # Check if it's a valid move or a valid accusation from 'start'
-        valid_move = board.is_valid_move(player.id, new_location) or (
+        valid_move = board._is_valid_move(player["id"], new_location) or (
             player["character"]["position"] == "start"
         )
         
@@ -215,8 +215,12 @@ class Lobby(db.Model):
 
         if valid_move:
             player["character"]["position"] = new_location
+            # Update the player's character position in the database
+            Player.query.filter_by(id=player["id"]).update(
+                {"character": json.dumps(player["character"])}
+            )
             # Update the player's location on the board
-            board._move_player(player.id, new_location)
+            board._move_player(player["id"], new_location)
             # Update the player's character position
             db.session.commit()
             return True

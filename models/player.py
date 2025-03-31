@@ -43,3 +43,6 @@ class Player(db.Model):
             "cards": json.loads(self.cards),
             "eliminated": self.eliminated,
         }
+    
+    def update_character(self, character):
+        self.character = json.dumps(character)
