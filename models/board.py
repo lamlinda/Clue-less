@@ -123,7 +123,7 @@ class Board(db.Model):
         hallways = json.loads(self.hallways)
 
         if not player_state:
-            return False
+            return {"result": False, "message": "Player not found"}
 
         current_position = player_state["character"]["position"]
         current_location = self._find_player_on_board(player_id)
@@ -133,10 +133,13 @@ class Board(db.Model):
 
         if current_position == "start":
             # If destination is a hallway, check if it's unoccupied
-            return destination in hallways and hallways[destination] is None 
+            if destination in hallways and hallways[destination] is None:
+                return {"result": True, "type": "hallway"}
+            else:
+                return {"result": False, "message": "Invalid move"}
         # 2. If destination hallway is occupied, deny
         if destination in hallways and hallways[destination] is not None:
-            return False
+            return {"result": False, "message": "Destination hallway is occupied"}
 
 
         # 3. Depending on location type (room or hallway), check valid adjacency
@@ -145,11 +148,17 @@ class Board(db.Model):
 
         # If in a room, must move to an adjacent hallway
         if location_type == "room":
-            return destination in self._get_adjacent_hallways_for_room(location_name)
+            return {
+                "result": destination in self._get_adjacent_hallways_for_room(location_name),
+                "type": "hallway",
+            }
 
         # If in a hallway, must move to an adjacent room
         if location_type == "hallway":
-            return destination in self._get_adjacent_rooms_for_hallway(location_name)
+            return {
+                "result": destination in self._get_adjacent_rooms_for_hallway(location_name),
+                "type": "room",
+            }
 
         # Otherwise, not valid
         return False

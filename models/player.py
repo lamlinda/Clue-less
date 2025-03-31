@@ -44,5 +44,3 @@ class Player(db.Model):
             "eliminated": self.eliminated,
         }
     
-    def update_character(self, character):
-        self.character = json.dumps(character)
