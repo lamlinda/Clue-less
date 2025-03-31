@@ -22,6 +22,7 @@ class Player(db.Model):
     eliminated = db.Column(
         db.Boolean, default=False
     )  # If player made incorrect accusation
+    
 
     def __init__(self, name, lobby_id=None):
         self.id = generate_uuid()

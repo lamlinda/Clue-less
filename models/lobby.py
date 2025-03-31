@@ -18,6 +18,7 @@ def generate_lobby_id():
 
 
 class Lobby(db.Model):
+
     id = db.Column(db.String(6), primary_key=True, default=generate_lobby_id)
     players = db.relationship("Player", backref="lobby", lazy=True)
 
@@ -200,6 +201,8 @@ class Lobby(db.Model):
             return False
 
         player = Player.query.filter_by(id=player_id).first().get_player_state()
+
+        print(player)  # For debugging
         if not player:
             return False
 
@@ -207,6 +210,8 @@ class Lobby(db.Model):
         valid_move = board.is_valid_move(player.id, new_location) or (
             player["character"]["position"] == "start"
         )
+        
+        print("valid_move", valid_move)  # For debugging
 
         if valid_move:
             player["character"]["position"] = new_location
