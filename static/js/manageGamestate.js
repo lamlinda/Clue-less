@@ -380,7 +380,7 @@ function showMoveOptions(moves) {
     moveButton.classList.add('move-option-btn');
 
     // Format button text based on move type
-    let buttonText = `Move to ${formatPositionName(move.position)}`;
+    let buttonText = `Move to ${formatPositionName(move)}`;
     if (move.via_secret_passage) {
         buttonText += ' (via secret passage)';
     } else if (move.stay_in_room) {
