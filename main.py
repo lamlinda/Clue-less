@@ -8,7 +8,7 @@ PORT = 5000
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///game.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+
 
 db.init_app(app)
 socketio.init_app(app)

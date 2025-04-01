@@ -124,36 +124,42 @@ def start_game(data):
         })
         return
 
-    # Change lobby status and randomize turn order
-    lobby.status = 'in_progress'
-    lobby.randomize_turn_order()
-
     # Initialize the game board and cards
-    board_state, game_state = lobby.initialize_game()
+    lobby.initialize_game()
 
     db.session.commit()
+
 
     # Get the player who has the first turn
     current_player = lobby.players[lobby.current_turn_idx]
 
     # Get all player positions to broadcast
+    all_player = lobby.getAllPlayers_state()
+
     player_positions = []
-    for player in lobby.players:
-        player_info = board_state['players'].get(player.id, {})
-        player_positions.append({
-            'player_id': player.id,
-            'name': player.name,
-            'character': player_info.get('character', 'Unknown'),
-            'position': player_info.get('position', 'Unknown'),
-            'position_type': player_info.get('position_type', 'Unknown')
-        })
+    for player in all_player:
+        # Get the player information from the board state
+
+        # convert string to dict
+
+        player_info = {
+            'player_id': player['id'],
+            'name': player['name'],
+            'character': player['character'].get('name', 'Unknown'),
+            'position': player['character'].get('position', 'Unknown'),
+            'position_type': player['character'].get('type', 'Unknown')
+        }
+        player_positions.append(player_info)
+
 
     # Get valid moves for the current player
-    valid_moves = lobby.get_valid_moves(current_player.id)
+    valid_moves = lobby.show_available_moves(current_player.id)
+
+    print(f"Valid moves for {current_player.name}: {valid_moves}")
 
     # Send individual cards to each player
     for player in lobby.players:
-        player_cards = game_state['player_cards'].get(player.id, [])
+        player_cards = json.loads(player.cards)
         emit('cards_dealt', {
             'cards': player_cards
         }, room=player.id)
@@ -178,22 +184,24 @@ def next_turn(data):
         return
 
     next_player = lobby.next_turn()
-    board_state = lobby.get_board_state()
+
 
     # Get all player positions to broadcast
     player_positions = []
     for player in lobby.players:
-        player_info = board_state['players'].get(player.id, {})
+        player_info = player._get_player_state()
+        character = player_info.get('character', {})
+        print(player_info)
         player_positions.append({
             'player_id': player.id,
             'name': player.name,
-            'character': player_info.get('character', 'Unknown'),
-            'position': player_info.get('position', 'Unknown'),
-            'position_type': player_info.get('position_type', 'Unknown')
+            'character': character.get('name', 'Unknown'),
+            'position': character.get('position', 'Unknown'),
+            'position_type': character.get('type', 'Unknown')
         })
 
     # Get valid moves for the current player
-    valid_moves = lobby.get_valid_moves(next_player.id)
+    valid_moves = lobby.show_available_moves(next_player.id)
 
     db.session.commit()
 
@@ -213,6 +221,8 @@ def make_move(data):
     player_id = data['player_id']
     move = data['move']
 
+    print(f"Received move: {move}")
+
     lobby = Lobby.query.get(lobby_id)
 
     if lobby is None:
@@ -226,76 +236,47 @@ def make_move(data):
         return
 
     # Get current board state
-    board_state = lobby.get_board_state()
+    board= lobby.get_board()
+
+    print(move)
 
     # Verify the move is valid
-    valid_moves = lobby.get_valid_moves(player_id)
-    valid_positions = [m['position'] for m in valid_moves]
 
-    if move['position'] not in valid_positions:
+    if not board._is_valid_move(player_id, move):
         emit('error', {'message': 'Invalid move', 'code': 'INVALID_MOVE'})
         return
 
-    # Update player position in the board state
-    player_data = board_state['players'][player_id]
-    old_position = player_data['position']
-    old_position_type = player_data['position_type']
+    # Make the move
 
-    # Remove player from old position if in a hallway
-    if old_position_type == 'hallway':
-        board_state['hallways'][old_position] = None
-
-    # Update player position
-    player_data['position'] = move['position']
-    player_data['position_type'] = move['type']
-    player_data['first_move'] = False
-
-    # If moving to a hallway, mark it as occupied
-    if move['type'] == 'hallway':
-        board_state['hallways'][move['position']] = player_id
-
-    # Clear the "moved by suggestion" flag if it exists
-    if 'moved_by_suggestion' in player_data:
-        del player_data['moved_by_suggestion']
-
-    # Update the board state
-    lobby.update_board_state(board_state)
-
+    try:
+        lobby.player_move(player_id, move)
+    except ValueError as e:
+        emit('error', {'message': str(e), 'code': 'MOVE_ERROR'})
+        return
+    
     # Get all player positions to broadcast
     player_positions = []
     for player in lobby.players:
-        player_info = board_state['players'].get(player.id, {})
+        player_info = player._get_player_state()
+        character = player_info.get('character', {})
+        print(player_info)
         player_positions.append({
             'player_id': player.id,
             'name': player.name,
-            'character': player_info.get('character', 'Unknown'),
-            'position': player_info.get('position', 'Unknown'),
-            'position_type': player_info.get('position_type', 'Unknown')
+            'character': character.get('name', 'Unknown'),
+            'position': character.get('position', 'Unknown'),
+            'position_type': character.get('type', 'Unknown')
         })
+
 
     # Emit the move update event
     emit('move_update', {
         'player_id': player_id,
         'player_name': current_player.name,
-        'old_position': old_position,
-        'new_position': move['position'],
+        'new_position': move,
         'player_positions': player_positions,
-        'can_suggest': move.get('can_suggest', False)
     }, room=lobby_id)
 
-    # If the player can't make a suggestion, automatically move to the next turn
-    if not move.get('can_suggest', False):
-        # Move to the next player's turn
-        next_player = lobby.next_turn()
-        valid_moves = lobby.get_valid_moves(next_player.id)
-        db.session.commit()
-
-        emit('turn_update', {
-            'player_id': next_player.id,
-            'player_name': next_player.name,
-            'player_positions': player_positions,
-            'valid_moves': valid_moves
-        }, room=lobby_id)
 
 
 @socketio.on('make_suggestion')
@@ -353,6 +334,7 @@ def handle_suggestion(data):
         next_player = lobby.next_turn()
         valid_moves = lobby.get_valid_moves(next_player.id)
         db.session.commit()
+
 
         emit('turn_update', {
             'player_id': next_player.id,
