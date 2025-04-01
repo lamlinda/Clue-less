@@ -3,8 +3,6 @@
  * @description This file handles all the events for player actions
  * (i.e movement, suggestions, accusations)
  * 
- * @dependencies 
- * 
  */
 
 // Listen for 'move_update' event
