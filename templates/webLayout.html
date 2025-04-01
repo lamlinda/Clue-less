@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Clue-Less Lobby Test</title>
+  <!-- Include the Socket.IO client library (ensure version compatibility with Flask-SocketIO) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js"></script>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='guiLayout.css') }}">
+
+  <script src="{{ url_for('static', filename='js/manageLobby.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/manageGUI.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/managePlayerActions.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/manageGamestate.js') }}" defer></script>
+
+</head>
+<body>
+  <h1>Clue-Less Lobby Test</h1>
+
+  <!-- Section to host a new lobby -->
+  <section id="hostSection">
+    <h2>Host Lobby</h2>
+    <input type="text" id="hostName" placeholder="Your Name">
+    <button id="hostLobbyBtn">Host Lobby</button>
+    <div id="hostResult"></div>
+  </section>
+
+  <hr>
+
+  <!-- Section to join an existing lobby -->
+  <section id="joinSection">
+    <h2>Join Lobby</h2>
+    <div id="lobbyNotification" class="notification" style="display: none;"></div>
+    <input type="text" id="joinName" placeholder="Your Name">
+    <input type="text" id="joinLobbyId" placeholder="Lobby ID">
+    <button id="joinLobbyBtn">Join Lobby</button>
+    <div id="joinResult"></div>
+  </section>
+
+  <hr>
+
+  <!-- Lobby status and controls -->
+  <section id="lobbySection" style="display: none;">
+    <h2>Lobby Status</h2>
+    <div id="lobbyInfo"></div>
+    <div id="playersContainer" class="players-list"></div>
+    <div id="startGameContainer" style="margin-top: 20px;">
+      <button id="startGameBtn" disabled>Start Game (Need at least 3 players)</button>
+      <div id="startGameResult"></div>
+    </div>
+  </section>
+
+  <!-- Game in progress section -->
+  <section id="gameSection" style="display: none;">
+    <h2>Game in Progress</h2>
+    <div id="gameStatus" class="status-bar"></div>
+
+    <div class="game-board-container">
+      <h3>Game Board</h3>
+      <div id="gameBoard" class="game-board">
+        <!-- Rooms -->
+        <div id="study" class="room">
+          Study
+          <div class="secret-passage" title="Secret passage to Kitchen"></div>
+        </div>
+        <div id="hall" class="room">Hall</div>
+        <div id="lounge" class="room">
+          Lounge
+          <div class="secret-passage" title="Secret passage to Conservatory"></div>
+        </div>
+        <div id="library" class="room">Library</div>
+        <div id="billiard" class="room">Billiard Room</div>
+        <div id="dining" class="room">Dining Room</div>
+        <div id="conservatory" class="room">
+          Conservatory
+          <div class="secret-passage" title="Secret passage to Lounge"></div>
+        </div>
+        <div id="ballroom" class="room">Ballroom</div>
+        <div id="kitchen" class="room">
+          Kitchen
+          <div class="secret-passage" title="Secret passage to Study"></div>
+        </div>
+
+        <!-- Hallways -->
+        <div id="study_hall" class="hallway"></div>
+        <div id="hall_lounge" class="hallway"></div>
+        <div id="study_library" class="hallway"></div>
+        <div id="hall_billiard" class="hallway"></div>
+        <div id="lounge_dining" class="hallway"></div>
+        <div id="library_billiard" class="hallway"></div>
+        <div id="billiard_dining" class="hallway"></div>
+        <div id="library_conservatory" class="hallway"></div>
+        <div id="billiard_ballroom" class="hallway"></div>
+        <div id="dining_kitchen" class="hallway"></div>
+        <div id="conservatory_ballroom" class="hallway"></div>
+        <div id="ballroom_kitchen" class="hallway"></div>
+
+        <!-- Starter Squares -->
+        <div id="scarlet_start" class="starter-square">Miss Scarlet</div>
+        <div id="mustard_start" class="starter-square">Col. Mustard</div>
+        <div id="white_start" class="starter-square">Mrs. White</div>
+        <div id="green_start" class="starter-square">Mr. Green</div>
+        <div id="peacock_start" class="starter-square">Mrs. Peacock</div>
+        <div id="plum_start" class="starter-square">Prof. Plum</div>
+      </div>
+
+      <div id="turnInfo" class="status-bar">Waiting for game to start...</div>
+
+      <!-- Player Cards -->
+      <div id="cardsContainer" class="cards-container" style="display: none;">
+        <h3>Your Cards</h3>
+        <div id="playerCards"></div>
+      </div>
+
+      <div id="playerPositions">
+        <h3>Player Positions</h3>
+        <table id="playerPositionsTable" class="player-list-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Character</th>
+              <th>Current Position</th>
+            </tr>
+          </thead>
+          <tbody id="playerPositionsBody">
+            <!-- Will be populated with player positions -->
+          </tbody>
+        </table>
+      </div>
+
+      <div id="moveOptions" style="margin-top: 20px; display: none;">
+        <h3>Your Move Options</h3>
+        <div id="moveOptionsContainer"></div>
+        <div id="moveResult"></div>
+      </div>
+
+      <!-- Suggestion Form -->
+      <div id="suggestionForm" class="action-form" style="display: none;">
+        <div class="form-title">Make a Suggestion</div>
+        <p id="currentRoom"></p>
+        <div class="form-group">
+          <label for="suggestSuspect">Suspect:</label>
+          <select id="suggestSuspect">
+            <option value="">Select a suspect...</option>
+            <option value="Miss Scarlet">Miss Scarlet</option>
+            <option value="Colonel Mustard">Colonel Mustard</option>
+            <option value="Mrs. White">Mrs. White</option>
+            <option value="Mr. Green">Mr. Green</option>
+            <option value="Mrs. Peacock">Mrs. Peacock</option>
+            <option value="Professor Plum">Professor Plum</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="suggestWeapon">Weapon:</label>
+          <select id="suggestWeapon">
+            <option value="">Select a weapon...</option>
+            <option value="Candlestick">Candlestick</option>
+            <option value="Knife">Knife</option>
+            <option value="Lead Pipe">Lead Pipe</option>
+            <option value="Revolver">Revolver</option>
+            <option value="Rope">Rope</option>
+            <option value="Wrench">Wrench</option>
+          </select>
+        </div>
+        <button id="makeSuggestionBtn">Make Suggestion</button>
+        <button id="skipSuggestionBtn">Skip (End Turn)</button>
+      </div>
+
+      <!-- Accusation Form -->
+      <div id="accusationForm" class="action-form" style="display: none;">
+        <div class="form-title">Make an Accusation</div>
+        <div class="form-group">
+          <label for="accuseSuspect">Suspect:</label>
+          <select id="accuseSuspect">
+            <option value="">Select a suspect...</option>
+            <option value="Miss Scarlet">Miss Scarlet</option>
+            <option value="Colonel Mustard">Colonel Mustard</option>
+            <option value="Mrs. White">Mrs. White</option>
+            <option value="Mr. Green">Mr. Green</option>
+            <option value="Mrs. Peacock">Mrs. Peacock</option>
+            <option value="Professor Plum">Professor Plum</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="accuseWeapon">Weapon:</label>
+          <select id="accuseWeapon">
+            <option value="">Select a weapon...</option>
+            <option value="Candlestick">Candlestick</option>
+            <option value="Knife">Knife</option>
+            <option value="Lead Pipe">Lead Pipe</option>
+            <option value="Revolver">Revolver</option>
+            <option value="Rope">Rope</option>
+            <option value="Wrench">Wrench</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="accuseRoom">Room:</label>
+          <select id="accuseRoom">
+            <option value="">Select a room...</option>
+            <option value="Study">Study</option>
+            <option value="Hall">Hall</option>
+            <option value="Lounge">Lounge</option>
+            <option value="Library">Library</option>
+            <option value="Billiard Room">Billiard Room</option>
+            <option value="Dining Room">Dining Room</option>
+            <option value="Conservatory">Conservatory</option>
+            <option value="Ballroom">Ballroom</option>
+            <option value="Kitchen">Kitchen</option>
+          </select>
+        </div>
+        <button id="makeAccusationBtn">Make Accusation</button>
+        <button id="cancelAccusationBtn">Cancel</button>
+      </div>
+
+      <!-- Disprove Suggestion Form -->
+      <div id="disproveForm" class="action-form" style="display: none;">
+        <div class="form-title">Disprove Suggestion</div>
+        <div id="suggestionToDisprove"></div>
+        <div class="form-group">
+          <label for="cardToShow">Select a card to show:</label>
+          <select id="cardToShow">
+            <option value="">Select a card...</option>
+            <!-- Will be populated dynamically -->
+          </select>
+        </div>
+        <button id="showCardBtn">Show Card</button>
+        <button id="cannotDisproveBtn">Cannot Disprove</button>
+      </div>
+
+      <!-- Suggestion History -->
+      <div id="suggestionHistory" class="suggestion-history" style="display: none;">
+        <h3>Suggestion History</h3>
+        <div id="suggestionHistoryList"></div>
+      </div>
+    </div>
+
+    <div id="gameControls" style="margin-top: 20px;">
+      <button id="nextTurnBtn" style="display: none;">Next Turn</button>
+      <button id="makeAccusationBtn2" style="display: none;">Make Accusation</button>
+      <div id="turnResult"></div>
+    </div>
+  </section>
+
+  
+</body>
+</html>
