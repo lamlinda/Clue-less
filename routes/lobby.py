@@ -238,7 +238,6 @@ def make_move(data):
     # Get current board state
     board= lobby.get_board()
 
-    print(move)
 
     # Verify the move is valid
 
@@ -247,6 +246,8 @@ def make_move(data):
         return
 
     # Make the move
+
+    old_position = json.loads(current_player.character).get('position', None)
 
     try:
         lobby.player_move(player_id, move)
@@ -274,6 +275,7 @@ def make_move(data):
         'player_id': player_id,
         'player_name': current_player.name,
         'new_position': move,
+        'old_position': old_position,
         'player_positions': player_positions,
     }, room=lobby_id)
 
