@@ -92,6 +92,43 @@ def join_lobby(data):
     }, room=lobby_id)
 
 
+@socketio.on('select_character')
+def select_character(data):
+    lobby_id = data['lobby_id']
+    player_id = data['player_id']
+    character_name = data['character_name']
+
+    lobby = Lobby.query.get(lobby_id)
+
+    if lobby is None:
+        emit('error', {'message': 'Lobby not found', 'code': 'LOBBY_NOT_FOUND'})
+        return
+
+    # Check if the player is already in the lobby
+    player = Player.query.get(player_id)
+    if player is None or player.lobby_id != lobby.id:
+        emit('error', {'message': 'Player not in lobby', 'code': 'PLAYER_NOT_IN_LOBBY'})
+        return
+
+    # Check if the character is already selected by another player
+    for p in lobby.players:
+        if p.character and p.character['name'] == character_name:
+            emit('error', {'message': f'Character {character_name} already selected', 'code': 'CHARACTER_ALREADY_SELECTED'})
+            return
+
+    # Set the player's character
+    lobby.change_character(player_id, character_name)
+
+    db.session.commit()
+
+    # Notify all players about the character selection
+    emit('character_selected', {
+        'player_id': player.id,
+        'character_name': character_name,
+        'characters': lobby.get_character_list()
+    }, room=lobby_id)
+
+
 @socketio.on('start_game')
 def start_game(data):
     lobby_id = data['lobby_id']

@@ -79,6 +79,11 @@ class Lobby(db.Model):
             }
         )
 
+
+    def get_characters_list(self):
+        """Get the list of characters in the lobby"""
+        return json.loads(self.characters)
+
     def next_turn(self):
         if self.players:
             self.current_turn_idx = (self.current_turn_idx + 1) % len(self.players)
