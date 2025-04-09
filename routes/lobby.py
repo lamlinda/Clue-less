@@ -78,7 +78,8 @@ def join_lobby(data):
     join_room(lobby_id)
 
     # Get the current player list
-    players_list = [{'player_id': p.id, 'name': p.name, 'is_host': p.id == lobby.host} for p in lobby.players]
+    players_list = [{'player_id': p.id, 'name': p.name, 'is_host': p.id == lobby.host, "select_character": p.character} for p in lobby.players]
+
 
     # Send the join event to all clients in the room, including the player's ID
     emit('lobby_joined', {
@@ -89,6 +90,50 @@ def join_lobby(data):
         'min_players': MIN_PLAYERS,
         'max_players': MAX_PLAYERS,
         'can_start': len(lobby.players) >= MIN_PLAYERS
+    }, room=lobby_id)
+
+
+@socketio.on('select_character')
+def select_character(data):
+    lobby_id = data['lobby_id']
+    player_id = data['player_id']
+    character_name = data['character_name']
+
+    lobby = Lobby.query.get(lobby_id)
+
+    if lobby is None:
+        emit('error', {'message': 'Lobby not found', 'code': 'LOBBY_NOT_FOUND'})
+        return
+
+    # Check if the player is already in the lobby
+    player = Player.query.get(player_id)
+    if player is None or player.lobby_id != lobby.id:
+        emit('error', {'message': 'Player not in lobby', 'code': 'PLAYER_NOT_IN_LOBBY'})
+        return
+
+    # Check if the character is already selected by another player
+    all_characters = json.loads(lobby.characters)
+    for character in all_characters.values():
+        if character['name'] == character_name and character['selected']:
+            emit('error', {
+                'message': f'Character {character_name} is already selected',
+                'code': 'CHARACTER_ALREADY_SELECTED'
+            })
+            return
+
+    # Set the player's character
+    lobby.change_character(player_id, character_name)
+    db.session.commit()
+
+    lobby = Lobby.query.get(lobby_id)  # Refresh the lobby object
+    characters = json.loads(lobby.characters)
+
+    # Notify all players about the character selection
+    emit('character_selected', {
+        'player_id': player.id,
+        'character_name': character_name,
+        'characters': characters,
+        'players': [{'player_id': p.id, 'name': p.name, 'character': json.loads(p.character)} for p in lobby.players],
     }, room=lobby_id)
 
 
