@@ -119,8 +119,8 @@ class Lobby(db.Model):
             player.is_ready = True
             db.session.commit()
 
-        # Randomize the characters for the players
-        self.random_character()
+        # # Randomize the characters for the players
+        # self.random_character()
 
         # Set the game status to 'in_progress'
         self.status = "in_progress"
@@ -136,19 +136,31 @@ class Lobby(db.Model):
 
     def change_character(self, player_id, character_name):
         """Change the character of a player"""
-        characters = self.characters
-
+        characters = json.loads(self.characters)
+        
         if character_name in characters:
             for player in self.players:
                 if player.id == player_id:
-                    if player.character in characters:
-                        characters[player.character]["selected"] = False
+                    # Check if player has a previous character and deselect it
+                    if player.character:
+                        try:
+                            previous_character = json.loads(player.character)
+                            if previous_character and "name" in previous_character:
+                                # Deselect the previously selected character
+                                prev_char_name = previous_character["name"]
+                                if prev_char_name in characters:
+                                    characters[prev_char_name]["selected"] = False
+                        except (json.JSONDecodeError, TypeError):
+                            # Handle case where character might not be valid JSON
+                            pass
+                            
+                    # Assign new character to player
                     player.character = json.dumps(characters[character_name])
                     characters[character_name]["selected"] = True
                     break
         else:
-            raise ValueError("Character not found in lobby")
-
+            raise ValueError(f"Character '{character_name}' not found in lobby")
+            
         self.characters = json.dumps(characters)
         db.session.commit()
         return characters

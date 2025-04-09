@@ -111,21 +111,29 @@ def select_character(data):
         return
 
     # Check if the character is already selected by another player
-    for p in lobby.players:
-        if p.character and p.character['name'] == character_name:
-            emit('error', {'message': f'Character {character_name} already selected', 'code': 'CHARACTER_ALREADY_SELECTED'})
-            return
 
+    all_characters = json.loads(lobby.characters)
+    for character in all_characters.values():
+        if character['name'] == character_name and character['selected']:
+            emit('error', {
+                'message': f'Character {character_name} is already selected',
+                'code': 'CHARACTER_ALREADY_SELECTED'
+            })
+            return
+    print("character_name", character_name)  # For debugging
     # Set the player's character
     lobby.change_character(player_id, character_name)
 
     db.session.commit()
 
+    lobby = Lobby.query.get(lobby_id)  # Refresh the lobby object
+    characters = json.loads(lobby.characters)
+
     # Notify all players about the character selection
     emit('character_selected', {
         'player_id': player.id,
         'character_name': character_name,
-        'characters': lobby.get_character_list()
+        'characters': characters,
     }, room=lobby_id)
 
 
