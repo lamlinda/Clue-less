@@ -38,7 +38,7 @@ socket.on('lobby_joined', function(data) {
         currentPlayerId = data.player_id;
     }
 
-    // Update lobby info display
+        // Update lobby info display
     const lobbyInfoDiv = document.getElementById('lobbyInfo');
 
     // Show lobby section and hide join/host sections if not already done
@@ -54,7 +54,7 @@ socket.on('lobby_joined', function(data) {
     data.players.forEach(function(player) {
         const hostBadge = player.is_host ? '<span class="host-indicator"> (Host)</span>' : '';
         const youBadge = player.player_id === currentPlayerId ? ' (You)' : '';
-        const characterBadge = player.character ? ` - ${player.character}` : '';
+        const characterBadge = player.select_character ? ` - ${JSON.parse(player.select_character).name}` : '';
         html += `<div class="player-item">${player.name}${hostBadge}${youBadge}${characterBadge}</div>`;
     });
 
@@ -63,16 +63,23 @@ socket.on('lobby_joined', function(data) {
     // Update the start game button status
     const startGameBtn = document.getElementById('startGameBtn');
     if (isHost) {
-        const allPlayersHaveCharacters = data.players.every(player => player.character);
-        const enoughPlayers = data.players.length >= minPlayers;
+        // Count total players and players with characters
+        const totalPlayers = data.players.length;
+        const playersWithCharacters = data.players.filter(player => player.select_character).length;
         
-        // Only enable start game if enough players AND if character selection is required, all players must have characters
-        startGameBtn.disabled = !enoughPlayers || (characterSelectionRequired && !allPlayersHaveCharacters);
+        // Enable button only if:
+        // 1. At least minPlayers have joined
+        // 2. All players have selected characters
+        const enoughPlayers = totalPlayers >= minPlayers;
+        const allPlayersHaveCharacters = totalPlayers === playersWithCharacters;
         
+        startGameBtn.disabled = !enoughPlayers || !allPlayersHaveCharacters;
+        
+        // Update button text based on conditions
         let buttonText = 'Start Game';
         if (!enoughPlayers) {
             buttonText = `Start Game (Need at least ${minPlayers} players)`;
-        } else if (characterSelectionRequired && !allPlayersHaveCharacters) {
+        } else if (!allPlayersHaveCharacters) {
             buttonText = 'Start Game (All players must select characters)';
         }
         
@@ -84,17 +91,18 @@ socket.on('lobby_joined', function(data) {
     
     // Show character selection if the player doesn't have a character yet
     const currentPlayer = data.players.find(p => p.player_id === currentPlayerId);
-    if (!currentPlayer.character) {
+    if (!currentPlayer.select_character) {
         document.getElementById('characterSelectionSection').style.display = 'block';
         
         // Get list of already selected characters to disable them
         const selectedCharacters = data.players
-            .filter(p => p.character)
-            .map(p => p.character);
+            .filter(p => p.select_character)
+            .map(p => JSON.parse(p.select_character).name);
         
         updateAvailableCharacters(selectedCharacters);
     } else {
-        document.getElementById('characterSelectionSection').style.display = 'none';
+        
+        selectedCharacter = JSON.parse(currentPlayer.select_character).name;
     }
 });
 
@@ -168,37 +176,68 @@ socket.on('error', function(data) {
 socket.on('character_selected', function(data) {
     console.log('Character selected:', data);
     
-    // Update the available characters based on the new selection
-    updateAvailableCharacters(data.characters.filter(char => char.selected).map(char => char.name));
+    // Extract selected characters from the characters object
+    let selectedCharacterNames = [];
     
-    // Update the player list to show the new character
-    const playersContainer = document.getElementById('playersContainer');
-    const playerItems = playersContainer.querySelectorAll('.player-item');
-    
-    playerItems.forEach(item => {
-        if (item.textContent.includes(data.player_name)) {
-            item.textContent += ` - ${data.character_name}`;
+    // Loop through the character object and find which ones are selected
+    if (data.characters) {
+        for (let charName in data.characters) {
+            if (data.characters[charName].selected) {
+                selectedCharacterNames.push(charName);
+            }
         }
-    });
+    }
     
-    // If this is the current player, hide the character selection
+    // Update the available characters based on the selected names
+    updateAvailableCharacters(selectedCharacterNames);
+    
+    // Update the player list with the latest information
+    if (data.players) {
+        const playersContainer = document.getElementById('playersContainer');
+        let html = "<h3>Players:</h3>";
+        
+        data.players.forEach(function(player) {
+            // Use is_host property from the player data if available
+            const hostBadge = player.player_id === currentPlayerId && isHost ? '<span class="host-indicator"> (Host)</span>' : '';
+            
+            // Determine if this is the current user
+            const youBadge = player.player_id === currentPlayerId ? ' (You)' : '';
+            
+            // Get character info if available
+            const characterBadge = player.character ? ` - ${player.character.name}` : '';
+            
+            html += `<div class="player-item" data-player-id="${player.player_id}">${player.name}${hostBadge}${youBadge}${characterBadge}</div>`;
+        });
+        
+        playersContainer.innerHTML = html;
+    }
+    
+    // If this is the current player, update the selected character
     if (data.player_id === currentPlayerId) {
-        document.getElementById('characterSelectionSection').style.display = 'none';
         selectedCharacter = data.character_name;
     }
     
     // Update start game button status for host
     if (isHost) {
         const startGameBtn = document.getElementById('startGameBtn');
-        // Check if all players have characters
-        const allPlayersHaveCharacters = Array.from(playerItems).every(item => 
-            item.textContent.includes(' - ') || !characterSelectionRequired
-        );
         
-        if (allPlayersHaveCharacters) {
-            startGameBtn.disabled = false;
-            startGameBtn.textContent = 'Start Game';
+        // Using the players data to determine if all have characters
+        const allPlayersHaveCharacters = data.players && 
+            data.players.every(player => player.character);
+        
+        const enoughPlayers = data.players && data.players.length >= minPlayers;
+        
+        // Only enable start game if enough players AND all players have characters
+        startGameBtn.disabled = !enoughPlayers || !allPlayersHaveCharacters;
+        
+        let buttonText = 'Start Game';
+        if (!enoughPlayers) {
+            buttonText = `Start Game (Need at least ${minPlayers} players)`;
+        } else if (!allPlayersHaveCharacters) {
+            buttonText = 'Start Game (All players must select characters)';
         }
+        
+        startGameBtn.textContent = buttonText;
     }
 });
 

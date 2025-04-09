@@ -78,7 +78,8 @@ def join_lobby(data):
     join_room(lobby_id)
 
     # Get the current player list
-    players_list = [{'player_id': p.id, 'name': p.name, 'is_host': p.id == lobby.host} for p in lobby.players]
+    players_list = [{'player_id': p.id, 'name': p.name, 'is_host': p.id == lobby.host, "select_character": p.character} for p in lobby.players]
+
 
     # Send the join event to all clients in the room, including the player's ID
     emit('lobby_joined', {
@@ -111,7 +112,6 @@ def select_character(data):
         return
 
     # Check if the character is already selected by another player
-
     all_characters = json.loads(lobby.characters)
     for character in all_characters.values():
         if character['name'] == character_name and character['selected']:
@@ -120,10 +120,9 @@ def select_character(data):
                 'code': 'CHARACTER_ALREADY_SELECTED'
             })
             return
-    print("character_name", character_name)  # For debugging
+
     # Set the player's character
     lobby.change_character(player_id, character_name)
-
     db.session.commit()
 
     lobby = Lobby.query.get(lobby_id)  # Refresh the lobby object
@@ -134,6 +133,7 @@ def select_character(data):
         'player_id': player.id,
         'character_name': character_name,
         'characters': characters,
+        'players': [{'player_id': p.id, 'name': p.name, 'character': json.loads(p.character)} for p in lobby.players],
     }, room=lobby_id)
 
 
