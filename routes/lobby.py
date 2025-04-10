@@ -133,7 +133,14 @@ def select_character(data):
         'player_id': player.id,
         'character_name': character_name,
         'characters': characters,
-        'players': [{'player_id': p.id, 'name': p.name, 'character': json.loads(p.character)} for p in lobby.players],
+        'players': [
+            {
+                'player_id': p.id, 
+                'name': p.name, 
+                'character': json.loads(p.character) if p.character else None
+            } 
+            for p in lobby.players
+        ],
     }, room=lobby_id)
 
 
