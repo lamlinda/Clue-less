@@ -194,3 +194,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for detective notes checkboxes
+    const checkboxes = document.querySelectorAll('#detectiveNotesSection input[type="checkbox"]');
+    
+    checkboxes.forEach((checkbox) => {
+        checkbox.addEventListener('change', function() {
+            // Get the corresponding label element using the 'for' attribute
+            const label = document.querySelector(`label[for="${this.id}"]`);
+            
+            if (label) {  // Ensure label exists
+                if (this.checked) {
+                    label.style.textDecoration = 'line-through';
+                    label.style.color = '#888'; // Dimmed color
+                } else {
+                    label.style.textDecoration = 'none';
+                    label.style.color = ''; // Reset the color
+                }
+            } else {
+                console.error('Label not found for checkbox:', this);
+            }
+        });
+    });
+});

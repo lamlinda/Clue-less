@@ -433,3 +433,65 @@ body {
   font-size: 0.8em;
   font-style: italic;
 }
+
+/* detective notes styling */
+#detectiveNotesSection {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px;
+  background-color: #f4f4f4;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.column {
+  width: 30%;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.column h3 {
+  text-align: center;
+  font-size: 1.2em;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.column label {
+  font-size: 1em;
+  color: #555;
+  cursor: pointer;
+  transition: color 0.3s;
+  margin-left: 10px;
+}
+
+input[type="checkbox"] {
+  transform: scale(1.2);
+  display: inline-block; /* Ensure checkboxes are inline with labels */
+}
+
+label:hover {
+  color: #007bff;
+}
+
+/* Flex container for each row */
+.column div {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* Make sure the layout looks good on smaller screens */
+@media (max-width: 768px) {
+  #detectiveNotesSection {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .column {
+    width: 80%;
+    margin-bottom: 20px;
+  }
+}
