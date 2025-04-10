@@ -48,7 +48,7 @@ class Board(db.Model):
                 "hall": [],
                 "study": [],
                 "library": [],
-                "billiard_room": [],
+                "billiard": [],
             }
         )
 
@@ -80,10 +80,11 @@ class Board(db.Model):
         return hallway
 
     # Get all the secret passages in the board
-    def get_secret_passages(self):
+    def get_valid_secret_passages(self, room):
         # Load the secret passages from JSON
         secret_passages = json.loads(self.secret_passages)
-        return secret_passages
+
+        return secret_passages.get(room)
 
     def _get_adjacent_rooms_for_hallway(self, hallway):
         return hallway.split("_")
@@ -146,12 +147,19 @@ class Board(db.Model):
         location_type = current_location["type"]
         location_name = current_location["location"]
 
-        # If in a room, must move to an adjacent hallway
+        # If in a room, must move to an adjacent hallway or through secret passage
         if location_type == "room":
-            return {
-                "result": destination in self._get_adjacent_hallways_for_room(location_name),
-                "type": "hallway",
-            }
+            if destination in self._get_adjacent_hallways_for_room(location_name):
+                return {
+                    "result": destination in self._get_adjacent_hallways_for_room(location_name),
+                    "type": "hallway",
+                }
+            elif destination == self.get_valid_secret_passages(location_name):
+                return {
+                    "result": destination == self.get_valid_secret_passages(location_name),
+                    "type": "room",
+                    "via_secret_passage": True,
+                }
 
         # If in a hallway, must move to an adjacent room
         if location_type == "hallway":

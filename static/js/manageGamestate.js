@@ -29,7 +29,8 @@ socket.on('game_started', function(data) {
     if (data.current_player_id === currentPlayerId) {
     isMyTurn = true;
     validMoves = data.valid_moves;
-    showMoveOptions(validMoves);
+    secret_passage = data.secret_passage
+    showMoveOptions(validMoves, secret_passage);
 
     // Show accusation button when it's our turn
     document.getElementById('makeAccusationBtn2').style.display = 'inline-block';
@@ -105,7 +106,8 @@ socket.on('turn_update', function(data) {
     isMyTurn = (data.player_id === currentPlayerId);
     if (isMyTurn) {
     validMoves = data.valid_moves;
-    showMoveOptions(validMoves);
+    secret_passage = data.secret_passage
+    showMoveOptions(validMoves, secret_passage);
 
     // Hide suggestion form if it was shown
     document.getElementById('suggestionForm').style.display = 'none';
@@ -358,7 +360,7 @@ function clearPlayerMarkers() {
 
 
 // Function to show move options for the current player
-function showMoveOptions(moves) {
+function showMoveOptions(moves, secret_passage) {
     console.log('Showing move options:', moves);
 
     // First clear any existing move options
@@ -381,7 +383,7 @@ function showMoveOptions(moves) {
 
     // Format button text based on move type
     let buttonText = `Move to ${formatPositionName(move)}`;
-    if (move.via_secret_passage) {
+    if (move === secret_passage) {
         buttonText += ' (via secret passage)';
     } else if (move.stay_in_room) {
         buttonText = 'Stay in room and make suggestion';

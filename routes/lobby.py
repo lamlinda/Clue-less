@@ -221,7 +221,8 @@ def start_game(data):
         'current_player_id': current_player.id,
         'current_player_name': current_player.name,
         'player_positions': player_positions,
-        'valid_moves': valid_moves
+        'valid_moves': valid_moves,
+        'secret_passage': None
     }, room=lobby_id)
 
 
@@ -255,13 +256,21 @@ def next_turn(data):
     # Get valid moves for the current player
     valid_moves = lobby.show_available_moves(next_player.id)
 
+    # Get secret passages
+    board = lobby.get_board()
+    secret_passage = None
+    next_player_location = board._find_player_on_board(next_player.id)
+    if next_player_location:
+        secret_passage = board.get_valid_secret_passages(next_player_location["location"])
+        
     db.session.commit()
 
     emit('turn_update', {
         'player_id': next_player.id,
         'player_name': next_player.name,
         'player_positions': player_positions,
-        'valid_moves': valid_moves
+        'valid_moves': valid_moves,
+        'secret_passage': secret_passage
     }, room=lobby_id)
 
 #----------------------MOVE THESE TO ANOTHER FILE FOR HANDLING PLAYER ACTIONS--------------------------------

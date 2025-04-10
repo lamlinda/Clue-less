@@ -312,7 +312,8 @@ socket.on('game_started', function(data) {
     if (data.current_player_id === currentPlayerId) {
         isMyTurn = true;
         validMoves = data.valid_moves;
-        showMoveOptions(validMoves);
+        secret_passages = data.secret_passages
+        showMoveOptions(validMoves, secret_passages);
 
         // Show accusation button when it's our turn
         document.getElementById('makeAccusationBtn2').style.display = 'inline-block';

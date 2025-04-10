@@ -164,6 +164,7 @@ class Lobby(db.Model):
         self.characters = json.dumps(characters)
         db.session.commit()
         return characters
+    
 
     def show_available_moves(self, player_id):
         """Show available moves for a player"""
@@ -200,6 +201,12 @@ class Lobby(db.Model):
                 adjacent_hallways = board._get_adjacent_hallways_for_room(
                     location["location"]
                 )
+
+                # Append valid secret passage
+                adjacent_secret_passages = board.get_valid_secret_passages(location["location"])
+                if adjacent_secret_passages:
+                    adjacent_hallways.append(adjacent_secret_passages)
+
                 return adjacent_hallways
 
             elif location["type"] == "hallway":
