@@ -161,7 +161,7 @@ class Board(db.Model):
             }
 
         # Otherwise, not valid
-        return {"result": False, "message": "Move is not valid"}
+        return False
 
 
     def _move_player(self, player_id, new_location):
