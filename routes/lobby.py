@@ -96,7 +96,6 @@ def join_lobby(data):
         'can_start': len(lobby.players) >= MIN_PLAYERS
     }, room=lobby_id)
 
-
 @socketio.on('start_game')
 def start_game(data):
     lobby_id = data['lobby_id']
