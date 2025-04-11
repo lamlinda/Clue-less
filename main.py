@@ -1,6 +1,7 @@
 from flask import Flask, render_template
 from extensions import db, socketio
 from routes.lobby import lobby_bp
+import routes.handlePlayerActions
 
 HOST = "0.0.0.0"
 PORT = 5000
@@ -20,11 +21,7 @@ with app.app_context():
 def test():
     return render_template('webLayout.html')
 
-
-
 app.register_blueprint(lobby_bp, url_prefix='/lobby')
-
-
 
 
 if __name__ == '__main__':
