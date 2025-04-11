@@ -456,6 +456,14 @@ def handle_accusation(data):
 
     # Make the accusation
     accusation = lobby.make_accusation(player_id, suspect, weapon, room)
+    # Broadcast the accusation to all players
+    emit('accusation_made', {
+    'player_id': player_id,
+    'player_name': current_player.name,
+    'suspect': suspect,
+    'weapon': weapon,
+    'room': room
+    }, room=lobby_id)
 
     # Check if accusation is correct
     if accusation['is_correct']:
