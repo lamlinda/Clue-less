@@ -1,7 +1,6 @@
 /**
  * @file manageGamestate.js
  * @description This file enforces game rules and manages the gamestate
- * 
  */
 
 // Listen for 'game_started' event
@@ -25,66 +24,110 @@ socket.on('game_started', function(data) {
     // Show suggestion history container
     document.getElementById('suggestionHistory').style.display = 'block';
 
+    // Explicitly request my cards from the server
+    console.log("Requesting my cards...");
+    socket.emit('get_my_cards', {
+        lobby_id: currentLobbyId,
+        player_id: currentPlayerId
+    });
+
     // Store valid moves if it's our turn
     if (data.current_player_id === currentPlayerId) {
-    isMyTurn = true;
-    validMoves = data.valid_moves;
-    showMoveOptions(validMoves);
+        isMyTurn = true;
+        validMoves = data.valid_moves;
 
-    // Show accusation button when it's our turn
-    document.getElementById('makeAccusationBtn2').style.display = 'inline-block';
+        // Check if player is already in a room
+        if (data.in_room) {
+            // Show suggestion form first
+            document.getElementById('suggestionForm').style.display = 'block';
+
+            // Pre-select the room in the suggestion form
+            const currentRoomElement = document.getElementById('currentRoom');
+            if (currentRoomElement && data.current_location) {
+                currentRoomElement.textContent = `Room: ${formatPositionName(data.current_location)}`;
+            }
+        }
+
+        showMoveOptions(validMoves);
+
+        // Show accusation button when it's our turn
+        document.getElementById('makeAccusationBtn2').style.display = 'inline-block';
     } else {
-    isMyTurn = false;
-    document.getElementById('moveOptions').style.display = 'none';
-    document.getElementById('makeAccusationBtn2').style.display = 'none';
+        isMyTurn = false;
+        document.getElementById('moveOptions').style.display = 'none';
+        document.getElementById('makeAccusationBtn2').style.display = 'none';
     }
 });
 
 
-// Listen for 'cards_dealt' event
-socket.on('cards_dealt', function(data) {
-    console.log('Cards dealt:', data);
-    myCards = data.cards;
+// Listen for 'my_cards' event (response to get_my_cards)
+socket.on('my_cards', function(data) {
+    console.log('Received my cards:', data);
 
-    // Display the cards
+    // Verify the cards were actually sent for this player
+    if (data.player_id && data.player_id !== currentPlayerId) {
+        console.warn("Received cards for a different player. Ignoring.");
+        return;
+    }
+
+    // Store the cards
+    myCards = data.cards || [];
+
+    // Store in localStorage for persistence (using player ID in the key)
+    localStorage.setItem('myCards_' + currentPlayerId, JSON.stringify(myCards));
+
+    console.log("My cards updated:", myCards);
+
+    // Always update the card display
     updateCardDisplay();
 });
 
 
 // Function to update card display
 function updateCardDisplay() {
-    if (!myCards || myCards.length === 0) return;
+    if (!myCards || myCards.length === 0) {
+        console.log("No cards to display");
+        return;
+    }
 
     const cardsContainer = document.getElementById('cardsContainer');
     const playerCards = document.getElementById('playerCards');
 
-    // Show the container
+    // Always show the container
     cardsContainer.style.display = 'block';
 
-    // Clear existing cards
+    // Clear existing content
     playerCards.innerHTML = '';
+
+    console.log("Displaying cards:", myCards);
 
     // Add each card
     myCards.forEach(function(card) {
-    const cardElement = document.createElement('div');
-    cardElement.className = 'card';
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
 
-    // Determine the card type
-    if (['Miss Scarlet', 'Colonel Mustard', 'Mrs. White', 'Mr. Green', 'Mrs. Peacock', 'Professor Plum'].includes(card)) {
-        cardElement.classList.add('card-suspect');
-        cardElement.innerHTML = `
-        <div class="card-title">${card}</div>
-        <div class="card-type">Weapon</div>
-        `;
-    } else {
-        cardElement.classList.add('card-room');
-        cardElement.innerHTML = `
-        <div class="card-title">${card}</div>
-        <div class="card-type">Room</div>
-        `;
-    }
+        // Determine the card type
+        if (['Miss Scarlet', 'Colonel Mustard', 'Mrs. White', 'Mr. Green', 'Mrs. Peacock', 'Professor Plum'].includes(card)) {
+            cardElement.classList.add('card-suspect');
+            cardElement.innerHTML = `
+            <div class="card-title">${card}</div>
+            <div class="card-type">Suspect</div>
+            `;
+        } else if (['Candlestick', 'Knife', 'Lead Pipe', 'Revolver', 'Rope', 'Wrench', 'Dagger'].includes(card)) {
+            cardElement.classList.add('card-weapon');
+            cardElement.innerHTML = `
+            <div class="card-title">${card}</div>
+            <div class="card-type">Weapon</div>
+            `;
+        } else {
+            cardElement.classList.add('card-room');
+            cardElement.innerHTML = `
+            <div class="card-title">${card}</div>
+            <div class="card-type">Room</div>
+            `;
+        }
 
-    playerCards.appendChild(cardElement);
+        playerCards.appendChild(cardElement);
     });
 }
 
@@ -98,51 +141,134 @@ socket.on('turn_update', function(data) {
 
     // Update player positions on the board
     if (data.player_positions) {
-    updatePlayerPositions(data.player_positions);
+        updatePlayerPositions(data.player_positions);
     }
 
     // Check if it's our turn and show move options
     isMyTurn = (data.player_id === currentPlayerId);
     if (isMyTurn) {
-    validMoves = data.valid_moves;
-    showMoveOptions(validMoves);
+        validMoves = data.valid_moves;
 
-    // Hide suggestion form if it was shown
-    document.getElementById('suggestionForm').style.display = 'none';
+        // First, check if the player is already in a room - if so, enable suggestion
+        if (data.in_room) {
+            // Show suggestion form
+            document.getElementById('suggestionForm').style.display = 'block';
 
-    // Show accusation button
-    document.getElementById('makeAccusationBtn2').style.display = 'inline-block';
+            // Pre-select the room in the suggestion form
+            const currentRoomElement = document.getElementById('currentRoom');
+            if (currentRoomElement && data.current_location) {
+                currentRoomElement.textContent = `Room: ${formatPositionName(data.current_location)}`;
+            }
+        }
+
+        showMoveOptions(validMoves);
+
+        // Hide disprove form if it was shown
+        document.getElementById('disproveForm').style.display = 'none';
+
+        // Show accusation button
+        document.getElementById('makeAccusationBtn2').style.display = 'inline-block';
     } else {
-    document.getElementById('moveOptions').style.display = 'none';
-    document.getElementById('suggestionForm').style.display = 'none';
-    document.getElementById('makeAccusationBtn2').style.display = 'none';
+        document.getElementById('moveOptions').style.display = 'none';
+        document.getElementById('suggestionForm').style.display = 'none';
+        document.getElementById('makeAccusationBtn2').style.display = 'none';
     }
 });
 
 
-// Listen for 'card_shown' event
+// Listen for 'card_shown' event - only received by the player who made the suggestion
 socket.on('card_shown', function(data) {
     console.log('Card shown to you:', data);
 
-    // Display the card that was shown to you
+    // Create a more prominent card display
     const cardShownContainer = document.createElement('div');
     cardShownContainer.className = 'card-shown-container';
+
     cardShownContainer.innerHTML = `
-    <p>Card shown to you: <strong>${data.card}</strong></p>
+    <p style="margin-bottom: 10px;"><strong>${data.shown_by_name}</strong> showed you:</p>
+    <div class="shown-card">${data.card}</div>
+    <p style="margin-top: 10px; font-style: italic; color: #666;">Only you can see this card.</p>
     `;
 
-    document.getElementById('turnResult').appendChild(cardShownContainer);
+    // Clear previous results and add this notification
+    const turnResult = document.getElementById('turnResult');
+    turnResult.innerHTML = '';
+    turnResult.appendChild(cardShownContainer);
+
+    // Store this card for future reference
+    if (!window.cardsShownToMe) {
+        window.cardsShownToMe = [];
+    }
+
+    window.cardsShownToMe.push({
+        shownBy: data.shown_by,
+        shownByName: data.shown_by_name,
+        card: data.card,
+        timestamp: new Date().toISOString(),
+        suggestionIdx: data.suggestion_idx
+    });
+
+    // Store in local storage for persistence
+    try {
+        localStorage.setItem('cardsShownToMe', JSON.stringify(window.cardsShownToMe));
+    } catch (e) {
+        console.error("Failed to store cards in localStorage:", e);
+    }
 });
 
 
-// Listen for 'cannot_disprove' event
+// Listen for 'suggestion_disproved' event
+socket.on('suggestion_disproved', function(data) {
+    console.log('Suggestion disproved:', data);
+
+    // Update the suggestion history
+    updateSuggestionInHistory(data.suggestion_idx, data.disproved_by);
+
+    // Hide any disprove form that might be showing
+    document.getElementById('disproveForm').style.display = 'none';
+
+    // Add a notification that the suggestion was disproved
+    const notification = document.createElement('div');
+    notification.className = 'disprove-notification';
+
+    // Use player name if available, otherwise get it from the player table
+    const disproverName = data.disproved_by_name || getPlayerNameById(data.disproved_by);
+    notification.innerHTML = `<p>${disproverName} has disproved the suggestion.</p>`;
+
+    // If we're not the suggester, we only see the generic message
+    // If we are the suggester, we'll receive both events, but we'll prioritize showing the card
+    // Add this notification to the turnResult unless it's the suggester (who gets a different notification)
+    const currentResult = document.getElementById('turnResult').querySelector('.card-shown-container');
+    if (!currentResult) {
+        document.getElementById('turnResult').innerHTML = '';
+        document.getElementById('turnResult').appendChild(notification);
+    }
+});
+
+
 socket.on('cannot_disprove', function(data) {
     console.log('Cannot disprove:', data);
 
-    // Update the suggestion history to indicate player couldn't disprove
-    const item = document.getElementById('suggestionHistoryList').querySelector(`[data-suggestion-idx="${data.suggestion_idx}"]`);
+    // Update the suggestion history
+    const item = document.querySelector(`[data-suggestion-idx="${data.suggestion_idx}"]`);
     if (item) {
-    item.innerHTML += `<br><em>${getPlayerNameById(data.player_id)} could not disprove</em>`;
+        const playerName = data.player_name || getPlayerNameById(data.player_id);
+        item.innerHTML += `<br><em>${playerName} could not disprove</em>`;
+    }
+
+    // Hide the disprove form if it's showing for the current player
+    if (data.player_id === currentPlayerId) {
+        document.getElementById('disproveForm').style.display = 'none';
+    }
+
+    // If this was the suggested character player, add special notification
+    if (data.is_suggested_character) {
+        const notification = document.createElement('div');
+        notification.className = 'disprove-notification';
+        const playerName = data.player_name || getPlayerNameById(data.player_id);
+        notification.innerHTML = `<p>${playerName} (the suggested character) could not disprove the suggestion.</p>`;
+        document.getElementById('turnResult').innerHTML = '';
+        document.getElementById('turnResult').appendChild(notification);
     }
 });
 
@@ -153,9 +279,9 @@ socket.on('accusation_result', function(data) {
 
     let resultMessage = '';
     if (data.is_correct) {
-    resultMessage = `<p class="success">${data.player_name} made a correct accusation and won the game!</p>`;
+        resultMessage = `<p class="success">${data.player_name} made a correct accusation and won the game!</p>`;
     } else {
-    resultMessage = `<p class="error">${data.player_name} made an incorrect accusation and is now eliminated from making further accusations.</p>`;
+        resultMessage = `<p class="error">${data.player_name} made an incorrect accusation and is now eliminated from making further accusations.</p>`;
     }
 
     document.getElementById('turnResult').innerHTML = resultMessage;
@@ -175,9 +301,162 @@ socket.on('game_over', function(data) {
     document.getElementById('moveOptions').style.display = 'none';
     document.getElementById('suggestionForm').style.display = 'none';
     document.getElementById('accusationForm').style.display = 'none';
+    document.getElementById('disproveForm').style.display = 'none';
     document.getElementById('nextTurnBtn').style.display = 'none';
     document.getElementById('makeAccusationBtn2').style.display = 'none';
 });
+
+
+// Listen for 'suggestion_made' event
+socket.on('suggestion_made', function(data) {
+    console.log('Suggestion made:', data);
+
+    // Add to the suggestion history
+    addSuggestionToHistory(data);
+
+    // Update player positions for the moved character
+    if (data.player_positions) {
+        updatePlayerPositions(data.player_positions);
+    }
+
+    // Clear any previous disprove notifications
+    document.getElementById('turnResult').innerHTML = '';
+
+    // Store the current suggestion for later use
+    currentSuggestion = data;
+
+    // If we're the next player to disprove
+    if (data.next_to_disprove === currentPlayerId) {
+        console.log("I need to disprove this suggestion!");
+
+        // Ensure we have our cards before showing the disprove form
+        if (!myCards || myCards.length === 0) {
+            console.log("Requesting my cards before disproving");
+            socket.emit('get_my_cards', {
+                lobby_id: currentLobbyId,
+                player_id: currentPlayerId
+            });
+
+            // Set a short timeout to wait for cards to load
+            setTimeout(() => {
+                prepareSuggestionDisprove(data);
+            }, 500);
+        } else {
+            // We already have cards, show the form
+            prepareSuggestionDisprove(data);
+        }
+
+        // Add a prominent notification
+        const notificationEl = document.createElement('div');
+        notificationEl.className = 'disprove-notification';
+
+        // Special message if this player controls the suggested character
+        if (data.is_suggested_character) {
+            notificationEl.innerHTML = "<p><strong>Your character was suggested!</strong> It's your turn to try to disprove this suggestion first!</p>";
+        } else {
+            notificationEl.innerHTML = "<p>It's your turn to try to disprove this suggestion!</p>";
+        }
+
+        // Insert at the top of the game status
+        const gameStatus = document.getElementById('gameStatus');
+        gameStatus.insertBefore(notificationEl, gameStatus.firstChild);
+
+        // Remove after 5 seconds
+        setTimeout(() => {
+            if (notificationEl.parentNode) {
+                notificationEl.parentNode.removeChild(notificationEl);
+            }
+        }, 5000);
+    } else {
+        // If it's not our turn to disprove, hide the disprove form
+        document.getElementById('disproveForm').style.display = 'none';
+
+        // Add a message about who needs to disprove
+        const disproverName = data.next_to_disprove_name || getPlayerNameById(data.next_to_disprove);
+        const waitingMessage = document.createElement('div');
+        waitingMessage.className = 'disprove-notification';
+
+        // Special message if the suggested character player is disproving
+        if (data.is_suggested_character) {
+            waitingMessage.innerHTML = `<p>The suggested character (${data.suspect}) is controlled by ${disproverName}. Waiting for them to try to disprove first...</p>`;
+        } else {
+            waitingMessage.innerHTML = `<p>Waiting for ${disproverName} to try to disprove...</p>`;
+        }
+
+        document.getElementById('turnResult').appendChild(waitingMessage);
+    }
+});x
+
+// Function to prepare the disprove suggestion form
+function prepareSuggestionDisprove(data) {
+    console.log("Preparing to disprove suggestion:", data);
+
+    // Store current suggestion data
+    currentSuggestion = data;
+
+    // Display the disprove form
+    const disproveForm = document.getElementById('disproveForm');
+    disproveForm.style.display = 'block';
+
+    // Display the suggestion to disprove
+    document.getElementById('suggestionToDisprove').innerHTML = `
+    <p>${data.player_name} suggests:</p>
+    <p><strong>${data.suspect}</strong> in the <strong>${data.room}</strong> with the <strong>${data.weapon}</strong></p>
+    `;
+
+    // Add special message if this player controls the suggested character
+    if (data.is_suggested_character) {
+        const characterMessage = document.createElement('p');
+        characterMessage.className = 'warning';
+        characterMessage.innerHTML = `<strong>Your character (${data.suspect}) was suggested!</strong>`;
+        document.getElementById('suggestionToDisprove').appendChild(characterMessage);
+    }
+
+    // Log current cards for debugging
+    console.log("Current cards:", myCards);
+
+    // Get matching cards that can disprove
+    const matchingCards = myCards.filter(card =>
+        card === data.suspect ||
+        card === data.weapon ||
+        card === data.room
+    );
+
+    console.log("Matching cards found:", matchingCards);
+
+    // Populate the select with matching cards
+    const cardSelect = document.getElementById('cardToShow');
+    cardSelect.innerHTML = '<option value="">Select a card...</option>';
+
+    matchingCards.forEach(card => {
+        const option = document.createElement('option');
+        option.value = card;
+        option.textContent = card;
+        cardSelect.appendChild(option);
+    });
+
+    // Enable/disable the buttons based on whether we have matching cards
+    document.getElementById('showCardBtn').disabled = matchingCards.length === 0;
+    document.getElementById('cannotDisproveBtn').disabled = matchingCards.length > 0;
+
+    // Add visual feedback about whether you can disprove
+    const disproveStatusEl = document.createElement('div');
+    disproveStatusEl.className = 'disprove-status';
+
+    if (matchingCards.length > 0) {
+        disproveStatusEl.innerHTML = `<p class="success">You have ${matchingCards.length} card(s) that can disprove this suggestion.</p>`;
+    } else {
+        disproveStatusEl.innerHTML = `<p class="warning">You don't have any cards that can disprove this suggestion.</p>`;
+    }
+
+    // Remove any existing status message
+    const existingStatus = document.querySelector('.disprove-status');
+    if (existingStatus) {
+        existingStatus.remove();
+    }
+
+    document.getElementById('disproveForm').insertBefore(disproveStatusEl, document.getElementById('suggestionToDisprove').nextSibling);
+}
 
 
 // Function to add a suggestion to the history
@@ -187,8 +466,10 @@ function addSuggestionToHistory(suggestion) {
     suggestionItem.className = 'suggestion-item';
     suggestionItem.setAttribute('data-suggestion-idx', suggestion.suggestion_idx);
 
+    const playerName = getPlayerNameById(suggestion.player_id);
+
     suggestionItem.innerHTML = `
-    <strong>${getPlayerNameById(suggestion.player_id)}</strong> suggests:
+    <strong>${playerName}</strong> suggests:
     ${suggestion.suspect} in the ${suggestion.room} with the ${suggestion.weapon}
     `;
 
@@ -198,12 +479,12 @@ function addSuggestionToHistory(suggestion) {
 
 // Function to update a suggestion in the history
 function updateSuggestionInHistory(suggestionIdx, disproved_by) {
-    const suggestionItem = document.getElementById('suggestionHistoryList')
-    .querySelector(`[data-suggestion-idx="${suggestionIdx}"]`);
+    const suggestionItem = document.querySelector(`[data-suggestion-idx="${suggestionIdx}"]`);
 
     if (suggestionItem) {
-    suggestionItem.innerHTML += `<br><em>Disproved by ${getPlayerNameById(disproved_by)}</em>`;
-    suggestionItem.classList.add('suggestion-disproved');
+        const playerName = getPlayerNameById(disproved_by);
+        suggestionItem.innerHTML += `<br><em>Disproved by ${playerName}</em>`;
+        suggestionItem.classList.add('suggestion-disproved');
     }
 }
 
@@ -213,49 +494,57 @@ function getPlayerNameById(playerId) {
     // Look through the positions table
     const rows = document.getElementById('playerPositionsBody').querySelectorAll('tr');
     for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    if (row.getAttribute('data-player-id') === playerId) {
-        return row.querySelector('td:first-child').textContent.replace(' (You)', '');
-    }
+        const row = rows[i];
+        if (row.getAttribute('data-player-id') === playerId) {
+            return row.querySelector('td:first-child').textContent.replace(' (You)', '');
+        }
     }
 
     return 'Unknown Player';
 }
 
 
-// Function to prepare the disprove suggestion form
-function prepareSuggestionDisprove(data) {
-    const disproveForm = document.getElementById('disproveForm');
-    disproveForm.style.display = 'block';
-
-    // Store current suggestion data
-    currentSuggestion = data;
-
-    // Display the suggestion to disprove
-    document.getElementById('suggestionToDisprove').innerHTML = `
-    <p>${data.player_name} suggests:</p>
-    <p><strong>${data.suspect}</strong> in the <strong>${data.room}</strong> with the <strong>${data.weapon}</strong></p>
-    `;
-
-    // Get matching cards that can disprove
-    const matchingCards = myCards.filter(card =>
-    card === data.suspect || card === data.weapon || card === data.room
-    );
-
-    // Populate the select with matching cards
+// Function to show a card to disprove a suggestion
+function showCard() {
     const cardSelect = document.getElementById('cardToShow');
-    cardSelect.innerHTML = '<option value="">Select a card...</option>';
+    const card = cardSelect.value;
 
-    matchingCards.forEach(card => {
-    const option = document.createElement('option');
-    option.value = card;
-    option.textContent = card;
-    cardSelect.appendChild(option);
+    if (!card) {
+        alert('Please select a card to show');
+        return;
+    }
+
+    console.log("Showing card to disprove suggestion:", card);
+
+    // Disable the buttons to prevent multiple submissions
+    document.getElementById('showCardBtn').disabled = true;
+    document.getElementById('cannotDisproveBtn').disabled = true;
+
+    socket.emit('disprove_suggestion', {
+        lobby_id: currentLobbyId,
+        player_id: currentPlayerId,
+        suggestion_idx: currentSuggestion.suggestion_idx,
+        card_shown: card,
+        is_suggested_character: currentSuggestion.is_suggested_character || false
     });
+}
 
-    // Enable/disable the buttons based on whether we have matching cards
-    document.getElementById('showCardBtn').disabled = matchingCards.length === 0;
-    document.getElementById('cannotDisproveBtn').disabled = matchingCards.length > 0;
+
+// Function to indicate you cannot disprove a suggestion
+function cannotDisprove() {
+    console.log("Cannot disprove suggestion");
+
+    // Disable the buttons to prevent multiple submissions
+    document.getElementById('showCardBtn').disabled = true;
+    document.getElementById('cannotDisproveBtn').disabled = true;
+
+    socket.emit('disprove_suggestion', {
+        lobby_id: currentLobbyId,
+        player_id: currentPlayerId,
+        suggestion_idx: currentSuggestion.suggestion_idx,
+        card_shown: null,
+        is_suggested_character: currentSuggestion.is_suggested_character || false
+    });
 }
 
 
@@ -263,8 +552,8 @@ function prepareSuggestionDisprove(data) {
 function updateTurnInfo(playerId, playerName) {
     const isMeTurn = (playerId === currentPlayerId);
     document.getElementById('turnInfo').innerHTML = isMeTurn
-    ? `<p><strong>It's your turn!</strong></p>`
-    : `<p>Current turn: <strong>${playerName}</strong></p>`;
+        ? `<p><strong>It's your turn!</strong></p>`
+        : `<p>Current turn: <strong>${playerName}</strong></p>`;
 
     // Show/hide next turn button for testing
     document.getElementById('nextTurnBtn').style.display = isMeTurn ? 'inline-block' : 'none';
@@ -289,59 +578,59 @@ function updatePlayerPositions(positions) {
 
     // Add each player to their position on the board and to the table
     positions.forEach(function(player, index) {
-    // Store my character if it's me
-    if (player.player_id === currentPlayerId) {
-        myCharacter = player.character;
-    }
+        // Store my character if it's me
+        if (player.player_id === currentPlayerId) {
+            myCharacter = player.character;
+        }
 
-    // Add player to position group
-    if (!positionGroups[player.position]) {
-        positionGroups[player.position] = [];
-    }
-    positionGroups[player.position].push(player);
+        // Add player to position group
+        if (!positionGroups[player.position]) {
+            positionGroups[player.position] = [];
+        }
+        positionGroups[player.position].push(player);
 
-    // Add player to the table
-    const row = document.createElement('tr');
-    if (player.player_id === currentPlayerId) {
-        row.classList.add('current-turn');
-    }
+        // Add player to the table
+        const row = document.createElement('tr');
+        if (player.player_id === currentPlayerId) {
+            row.classList.add('current-player');
+        }
 
-    row.setAttribute('data-player-id', player.player_id);
+        row.setAttribute('data-player-id', player.player_id);
 
-    row.innerHTML = `
-        <td>${player.name}${player.player_id === currentPlayerId ? ' (You)' : ''}</td>
-        <td>${player.character}</td>
-        <td>${formatPositionName(player.position)}</td>
-    `;
-    tbody.appendChild(row);
+        row.innerHTML = `
+            <td>${player.name}${player.player_id === currentPlayerId ? ' (You)' : ''}</td>
+            <td>${player.character}</td>
+            <td>${formatPositionName(player.position)}</td>
+        `;
+        tbody.appendChild(row);
     });
 
     // Now add player tokens to the board
     Object.keys(positionGroups).forEach(function(position) {
-    const positionElement = document.getElementById(position);
-    if (!positionElement) return;
+        const positionElement = document.getElementById(position);
+        if (!positionElement) return;
 
-    const players = positionGroups[position];
-    players.forEach(function(player, idx) {
-        // Create a player token
-        const playerToken = document.createElement('div');
-        playerToken.classList.add('player-token');
+        const players = positionGroups[position];
+        players.forEach(function(player, idx) {
+            // Create a player token
+            const playerToken = document.createElement('div');
+            playerToken.classList.add('player-token');
 
-        // Get character class (e.g., "scarlet" from "Miss Scarlet")
-        if (player.character) {
-        const characterName = player.character.toLowerCase().split(' ')[1];
-        playerToken.classList.add('character-' + characterName);
-        }
+            // Get character class (e.g., "scarlet" from "Miss Scarlet")
+            if (player.character) {
+                const characterName = player.character.toLowerCase().split(' ')[1];
+                playerToken.classList.add('character-' + characterName);
+            }
 
-        // Add positioning class based on index
-        playerToken.classList.add('player-position-' + (idx % 6));
+            // Add positioning class based on index
+            playerToken.classList.add('player-position-' + (idx % 6));
 
-        // Add title attribute for tooltip on hover
-        playerToken.title = `${player.name} (${player.character})${player.player_id === currentPlayerId ? ' (You)' : ''}`;
+            // Add title attribute for tooltip on hover
+            playerToken.title = `${player.name} (${player.character})${player.player_id === currentPlayerId ? ' (You)' : ''}`;
 
-        // Add to the board
-        positionElement.appendChild(playerToken);
-    });
+            // Add to the board
+            positionElement.appendChild(playerToken);
+        });
     });
 }
 
@@ -349,10 +638,10 @@ function updatePlayerPositions(positions) {
 // Function to clear player markers from all board spaces
 function clearPlayerMarkers() {
     document.querySelectorAll('.room, .hallway, .starter-square').forEach(function(element) {
-    // Remove all player tokens
-    element.querySelectorAll('.player-token').forEach(function(token) {
-        token.remove();
-    });
+        // Remove all player tokens
+        element.querySelectorAll('.player-token').forEach(function(token) {
+            token.remove();
+        });
     });
 }
 
@@ -369,52 +658,47 @@ function showMoveOptions(moves) {
     moveOptionsContainer.innerHTML = '';
 
     if (!moves || moves.length === 0) {
-    moveOptionsContainer.innerHTML = '<p>No valid moves available.</p>';
-    document.getElementById('moveOptions').style.display = 'block';
-    return;
+        moveOptionsContainer.innerHTML = '<p>No valid moves available.</p>';
+        document.getElementById('moveOptions').style.display = 'block';
+        return;
     }
 
     // Add text buttons in the moveOptionsContainer
     moves.forEach(function(move) {
-    const moveButton = document.createElement('button');
-    moveButton.classList.add('move-option-btn');
+        const moveButton = document.createElement('button');
+        moveButton.classList.add('move-option-btn');
 
-    // Format button text based on move type
-    let buttonText = `Move to ${formatPositionName(move)}`;
-    if (move.via_secret_passage) {
-        buttonText += ' (via secret passage)';
-    } else if (move.stay_in_room) {
-        buttonText = 'Stay in room and make suggestion';
-    }
+        // Format button text based on move type
+        let buttonText = `Move to ${formatPositionName(move)}`;
 
-    moveButton.textContent = buttonText;
+        moveButton.textContent = buttonText;
 
-    // Add click event to make the move
-    moveButton.addEventListener('click', function() {
-        makeMove(move);
-    });
+        // Add click event to make the move
+        moveButton.addEventListener('click', function() {
+            makeMove(move);
+        });
 
-    moveOptionsContainer.appendChild(moveButton);
-    moveOptionsContainer.appendChild(document.createElement('br'));
+        moveOptionsContainer.appendChild(moveButton);
+        moveOptionsContainer.appendChild(document.createElement('br'));
     });
 
     // Also highlight the valid moves on the board
     moves.forEach(function(move) {
-    const positionElement = document.getElementById(move.position);
-    if (positionElement) {
-        positionElement.classList.add('move-option');
+        const positionElement = document.getElementById(move);
+        if (positionElement) {
+            positionElement.classList.add('move-option');
 
-        // Add a small hint
-        const hintSpan = document.createElement('span');
-        hintSpan.classList.add('move-hint');
-        hintSpan.textContent = 'Click to move';
-        positionElement.appendChild(hintSpan);
+            // Add a small hint
+            const hintSpan = document.createElement('span');
+            hintSpan.classList.add('move-hint');
+            hintSpan.textContent = 'Click to move';
+            positionElement.appendChild(hintSpan);
 
-        // Add click event to the board element too
-        positionElement.addEventListener('click', function() {
-        makeMove(move);
-        });
-    }
+            // Add click event to the board element too
+            positionElement.addEventListener('click', function() {
+                makeMove(move);
+            });
+        }
     });
 
     document.getElementById('moveOptions').style.display = 'block';
@@ -425,17 +709,17 @@ function showMoveOptions(moves) {
 function clearMoveOptions() {
     // Remove move-option class from all elements
     document.querySelectorAll('.move-option').forEach(function(element) {
-    element.classList.remove('move-option');
+        element.classList.remove('move-option');
 
-    // Remove the click event (needs to be the same function reference, which we don't have)
-    // So recreate the element to remove all listeners
-    const newElement = element.cloneNode(true);
-    element.parentNode.replaceChild(newElement, element);
+        // Remove the click event (needs to be the same function reference, which we don't have)
+        // So recreate the element to remove all listeners
+        const newElement = element.cloneNode(true);
+        element.parentNode.replaceChild(newElement, element);
     });
 
     // Remove all move hints
     document.querySelectorAll('.move-hint').forEach(function(hint) {
-    hint.remove();
+        hint.remove();
     });
 }
 
@@ -446,14 +730,14 @@ function formatPositionName(position) {
 
     // For starter positions
     if (position.endsWith('_start')) {
-    const character = position.replace('_start', '');
-    return `${character.charAt(0).toUpperCase() + character.slice(1)} starting position`;
+        const character = position.replace('_start', '');
+        return `${character.charAt(0).toUpperCase() + character.slice(1)} starting position`;
     }
 
     // For hallways
     if (position.includes('_')) {
-    const rooms = position.split('_');
-    return `Hallway between ${rooms[0].charAt(0).toUpperCase() + rooms[0].slice(1)} and ${rooms[1].charAt(0).toUpperCase() + rooms[1].slice(1)}`;
+        const rooms = position.split('_');
+        return `Hallway between ${rooms[0].charAt(0).toUpperCase() + rooms[0].slice(1)} and ${rooms[1].charAt(0).toUpperCase() + rooms[1].slice(1)}`;
     }
 
     // For rooms
