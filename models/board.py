@@ -43,7 +43,7 @@ class Board(db.Model):
                 "kitchen": [],
                 "ballroom": [],
                 "conservatory": [],
-                "dining_room": [],
+                "dining": [],
                 "lounge": [],
                 "hall": [],
                 "study": [],
@@ -161,12 +161,15 @@ class Board(db.Model):
             }
 
         # Otherwise, not valid
-        return {"result": False, "message": "Move is not valid"}
+        return False
 
 
     def _move_player(self, player_id, new_location):
         rooms = json.loads(self.rooms)
         hallways = json.loads(self.hallways)
+
+        print("rooms", rooms)
+        print("hallways", hallways)
 
         current_location = self._find_player_on_board(player_id)
 
