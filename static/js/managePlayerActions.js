@@ -2,7 +2,7 @@
  * @file managePlayerActions.js
  * @description This file handles all the events for player actions
  * (i.e movement, suggestions, accusations)
- * 
+ *
  */
 
 // Listen for 'move_update' event
@@ -18,49 +18,20 @@ socket.on('move_update', function(data) {
 
     // If it's still our turn (for making a suggestion after moving)
     if (data.player_id === currentPlayerId && data.can_suggest) {
-    document.getElementById('moveOptions').style.display = 'none';
-    document.getElementById('moveResult').innerHTML = '';
+        document.getElementById('moveOptions').style.display = 'none';
+        document.getElementById('moveResult').innerHTML = '';
 
-    // Show suggestion form
-    document.getElementById('suggestionForm').style.display = 'block';
+        // Show suggestion form
+        document.getElementById('suggestionForm').style.display = 'block';
 
-    // Pre-select the room in the suggestion form based on where we are
-    if (data.new_position) {
-        const currentRoomElement = document.getElementById('currentRoom');
-        if (currentRoomElement) {
-        currentRoomElement.textContent = `Room: ${formatPositionName(data.new_position)}`;
+        // Pre-select the room in the suggestion form based on where we are
+        if (data.new_position) {
+            const currentRoomElement = document.getElementById('currentRoom');
+            if (currentRoomElement) {
+                currentRoomElement.textContent = `Room: ${formatPositionName(data.new_position)}`;
+            }
         }
     }
-    }
-});
-
-
-// Listen for 'suggestion_made' event
-socket.on('suggestion_made', function(data) {
-    console.log('Suggestion made:', data);
-
-    // Add to the suggestion history
-    addSuggestionToHistory(data);
-
-    // Update player positions for the moved character
-    if (data.player_positions) {
-    updatePlayerPositions(data.player_positions);
-    }
-
-    // If we're the next player to disprove
-    if (data.next_to_disprove === currentPlayerId) {
-    // Show the disprove form
-    prepareSuggestionDisprove(data);
-    }
-});
-
-
-// Listen for 'suggestion_disproved' event
-socket.on('suggestion_disproved', function(data) {
-    console.log('Suggestion disproved:', data);
-
-    // Update the suggestion history
-    updateSuggestionInHistory(data.suggestion_idx, data.disproved_by);
 });
 
 
@@ -73,9 +44,9 @@ function makeMove(move) {
 
     // Emit the make_move event
     socket.emit('make_move', {
-    lobby_id: currentLobbyId,
-    player_id: currentPlayerId,
-    move: move
+        lobby_id: currentLobbyId,
+        player_id: currentPlayerId,
+        move: move
     });
 }
 
@@ -86,19 +57,23 @@ function makeSuggestion() {
     const weapon = document.getElementById('suggestWeapon').value;
 
     if (!suspect || !weapon) {
-    alert('Please select both a suspect and a weapon');
-    return;
+        alert('Please select both a suspect and a weapon');
+        return;
     }
 
-    socket.emit('make_suggestion', {
-    lobby_id: currentLobbyId,
-    player_id: currentPlayerId,
-    suspect: suspect,
-    weapon: weapon
-    });
+    console.log("Making suggestion:", suspect, "with", weapon);
 
-    // Hide the suggestion form
-    document.getElementById('suggestionForm').style.display = 'none';
+    // Display a loading indicator or disable the button
+    document.getElementById('makeSuggestionBtn').disabled = true;
+    document.getElementById('makeSuggestionBtn').textContent = 'Processing...';
+
+    // Emit the suggestion
+    socket.emit('make_suggestion', {
+        lobby_id: currentLobbyId,
+        player_id: currentPlayerId,
+        suspect: suspect,
+        weapon: weapon
+    });
 }
 
 
@@ -109,55 +84,64 @@ function makeAccusation() {
     const room = document.getElementById('accuseRoom').value;
 
     if (!suspect || !weapon || !room) {
-    alert('Please select a suspect, weapon, and room');
-    return;
+        alert('Please select a suspect, weapon, and room');
+        return;
     }
 
     if (confirm(`Are you sure you want to accuse ${suspect} of committing the murder in the ${room} with the ${weapon}? If you're wrong, you'll be eliminated from the game!`)) {
-    socket.emit('make_accusation', {
-        lobby_id: currentLobbyId,
-        player_id: currentPlayerId,
-        suspect: suspect,
-        weapon: weapon,
-        room: room
-    });
+        socket.emit('make_accusation', {
+            lobby_id: currentLobbyId,
+            player_id: currentPlayerId,
+            suspect: suspect,
+            weapon: weapon,
+            room: room
+        });
 
-    // Hide the accusation form
-    document.getElementById('accusationForm').style.display = 'none';
+        // Hide the accusation form
+        document.getElementById('accusationForm').style.display = 'none';
     }
 }
 
 
 // Function to show a card to disprove a suggestion
 function showCard() {
-    const card = document.getElementById('cardToShow').value;
+    const cardSelect = document.getElementById('cardToShow');
+    const card = cardSelect.value;
 
     if (!card) {
-    alert('Please select a card to show');
-    return;
+        alert('Please select a card to show');
+        return;
     }
 
-    socket.emit('disprove_suggestion', {
-    lobby_id: currentLobbyId,
-    player_id: currentPlayerId,
-    suggestion_idx: currentSuggestion.suggestion_idx,
-    card_shown: card
-    });
+    console.log("Showing card to disprove suggestion:", card);
 
-    // Hide the disprove form
-    document.getElementById('disproveForm').style.display = 'none';
+    // Disable the buttons to prevent multiple submissions
+    document.getElementById('showCardBtn').disabled = true;
+    document.getElementById('cannotDisproveBtn').disabled = true;
+
+    socket.emit('disprove_suggestion', {
+        lobby_id: currentLobbyId,
+        player_id: currentPlayerId,
+        suggestion_idx: currentSuggestion.suggestion_idx,
+        card_shown: card,
+        is_suggested_character: currentSuggestion.is_suggested_character || false
+    });
 }
 
 
 // Function to indicate you cannot disprove a suggestion
 function cannotDisprove() {
-    socket.emit('disprove_suggestion', {
-    lobby_id: currentLobbyId,
-    player_id: currentPlayerId,
-    suggestion_idx: currentSuggestion.suggestion_idx,
-    card_shown: null
-    });
+    console.log("Cannot disprove suggestion");
 
-    // Hide the disprove form
-    document.getElementById('disproveForm').style.display = 'none';
+    // Disable the buttons to prevent multiple submissions
+    document.getElementById('showCardBtn').disabled = true;
+    document.getElementById('cannotDisproveBtn').disabled = true;
+
+    socket.emit('disprove_suggestion', {
+        lobby_id: currentLobbyId,
+        player_id: currentPlayerId,
+        suggestion_idx: currentSuggestion.suggestion_idx,
+        card_shown: null,
+        is_suggested_character: currentSuggestion.is_suggested_character || false
+    });
 }

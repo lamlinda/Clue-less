@@ -22,7 +22,7 @@ class Cards():
 
         self.weapon = [
             "Candlestick",
-            "Dagger",
+            "Knife",
             "Lead Pipe",
             "Revolver",
             "Rope",
@@ -71,5 +71,3 @@ class Cards():
             player_cards[players[i % len(players)].id].append(card)
 
         return player_cards    
-    
-    
