@@ -442,13 +442,15 @@ def handle_accusation(data):
     'room': room
     }, room=lobby_id)
 
+    actual_solution = json.loads(json.loads(lobby.solution))
+
     # Check if accusation is correct
     if accusation['is_correct']:
         # Player won the game!
         emit('game_over', {
             'winner': player_id,
             'winner_name': current_player.name,
-            'solution': lobby.get_game_state()['solution']
+            'solution': actual_solution
         }, room=lobby_id)
     else:
         # Incorrect accusation - player is eliminated
@@ -473,7 +475,7 @@ def handle_accusation(data):
             emit('game_over', {
                 'winner': winner.id,
                 'winner_name': winner.name,
-                'solution': lobby.solution
+                'solution': actual_solution
             }, room=lobby_id)
         else:
             # Move to the next player
