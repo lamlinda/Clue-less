@@ -48,7 +48,7 @@ class Board(db.Model):
                 "hall": [],
                 "study": [],
                 "library": [],
-                "billiard": [],
+                "billiard_room": [],
             }
         )
 
@@ -80,11 +80,10 @@ class Board(db.Model):
         return hallway
 
     # Get all the secret passages in the board
-    def get_valid_secret_passages(self, room):
+    def get_secret_passages(self):
         # Load the secret passages from JSON
         secret_passages = json.loads(self.secret_passages)
-
-        return secret_passages.get(room)
+        return secret_passages
 
     def _get_adjacent_rooms_for_hallway(self, hallway):
         return hallway.split("_")
@@ -147,19 +146,12 @@ class Board(db.Model):
         location_type = current_location["type"]
         location_name = current_location["location"]
 
-        # If in a room, must move to an adjacent hallway or through secret passage
+        # If in a room, must move to an adjacent hallway
         if location_type == "room":
-            if destination in self._get_adjacent_hallways_for_room(location_name):
-                return {
-                    "result": destination in self._get_adjacent_hallways_for_room(location_name),
-                    "type": "hallway",
-                }
-            elif destination == self.get_valid_secret_passages(location_name):
-                return {
-                    "result": destination == self.get_valid_secret_passages(location_name),
-                    "type": "room",
-                    "via_secret_passage": True,
-                }
+            return {
+                "result": destination in self._get_adjacent_hallways_for_room(location_name),
+                "type": "hallway",
+            }
 
         # If in a hallway, must move to an adjacent room
         if location_type == "hallway":
@@ -169,7 +161,7 @@ class Board(db.Model):
             }
 
         # Otherwise, not valid
-        return {"result": False, "message": "Move is not valid"}
+        return False
 
 
     def _move_player(self, player_id, new_location):
