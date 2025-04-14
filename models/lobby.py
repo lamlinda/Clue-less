@@ -269,3 +269,30 @@ class Lobby(db.Model):
         self.characters = json.dumps(characters)
         db.session.commit()
         return characters
+
+
+    def make_accusation(self, player_id, suspect, weapon, room):
+        """Check if a player's accusation is correct."""
+        actual_solution = json.loads(json.loads(self.solution))
+
+        print("Type of self.solution:", type(self.solution))
+
+        print("actual_solution:", actual_solution)
+        print("type of actual_solution:", type(actual_solution))
+        print("raw self.solution:", self.solution)
+
+        is_correct = (
+            actual_solution["suspect"] == suspect and
+            actual_solution["weapon"] == weapon and
+            actual_solution["room"] == room
+            )
+
+        return {
+            "is_correct": is_correct,
+            "accused": {
+                "suspect": suspect,
+                "weapon": weapon,
+                "room": room
+            },
+            "solution": actual_solution
+    }   

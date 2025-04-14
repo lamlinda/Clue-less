@@ -433,6 +433,15 @@ def handle_accusation(data):
     # Make the accusation
     accusation = lobby.make_accusation(player_id, suspect, weapon, room)
 
+    # Broadcast the accusation to all players
+    emit('accusation_made', {
+    'player_id': player_id,
+    'player_name': current_player.name,
+    'suspect': suspect,
+    'weapon': weapon,
+    'room': room
+    }, room=lobby_id)
+
     # Check if accusation is correct
     if accusation['is_correct']:
         # Player won the game!
@@ -464,7 +473,7 @@ def handle_accusation(data):
             emit('game_over', {
                 'winner': winner.id,
                 'winner_name': winner.name,
-                'solution': lobby.get_game_state()['solution']
+                'solution': lobby.solution
             }, room=lobby_id)
         else:
             # Move to the next player
@@ -472,7 +481,7 @@ def handle_accusation(data):
             while next_player.eliminated:
                 next_player = lobby.next_turn()
 
-            valid_moves = lobby.get_valid_moves(next_player.id)
+            valid_moves = lobby.show_available_moves(next_player.id)
             db.session.commit()
 
             emit('turn_update', {
