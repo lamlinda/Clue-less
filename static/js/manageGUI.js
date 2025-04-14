@@ -9,47 +9,49 @@ document.getElementById('hostLobbyBtn').addEventListener('click', function() {
     const hostName = document.getElementById('hostName').value;
 
     if (!hostName.trim()) {
-    document.getElementById('hostResult').innerHTML =
-        '<p class="error">Please enter your name</p>';
-    return;
+        document.getElementById('hostResult').innerHTML =
+            '<p class="error">Please enter your name</p>';
+        return;
     }
 
     // POST to the /lobby/host endpoint
     fetch('/lobby/host', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({name: hostName})
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: hostName})
     })
     .then(response => response.json())
     .then(data => {
-    // Store the player and lobby information
-    currentLobbyId = data.lobby_id;
-    currentPlayerId = data.player_id;
-    isHost = true;
+        // Store the player and lobby information
+        currentLobbyId = data.lobby_id;
+        currentPlayerId = data.player_id;
+        isHost = true;
 
-    // Show result
-    const hostResultDiv = document.getElementById('hostResult');
-    hostResultDiv.innerHTML = `<p class="success">Lobby created!</p>` +
+        // Show result
+        const hostResultDiv = document.getElementById('hostResult');
+        hostResultDiv.innerHTML = `<p class="success">Lobby created!</p>` +
                                 `<p>Lobby ID: <strong>${data.lobby_id}</strong> (Share this with other players)</p>` +
                                 `<p>Your Player ID: ${data.player_id}</p>`;
 
-    console.log("joining lobby as host")
-    // Automatically join the lobby room as host
-    socket.emit('join_lobby', {
-        lobby_id: data.lobby_id,
-        name: hostName,
-        player_id: data.player_id  // Pass the player_id to identify as host
-    });
+        console.log("joining lobby as host")
+        // Automatically join the lobby room as host
+        socket.emit('join_lobby', {
+            lobby_id: data.lobby_id,
+            name: hostName,
+            player_id: data.player_id  // Pass the player_id to identify as host
+        });
 
-    // Hide host/join sections
-    document.getElementById('hostSection').style.display = 'none';
-    document.getElementById('joinSection').style.display = 'none';
+        // Hide host/join sections
+        document.getElementById('hostSection').style.display = 'none';
+        document.getElementById('joinSection').style.display = 'none';
 
+        // Show character selection
+        document.getElementById('characterSelectionSection').style.display = 'block';
     })
     .catch(error => {
-    console.error('Error:', error);
-    document.getElementById('hostResult').innerHTML =
-        '<p class="error">Error creating lobby. Please try again.</p>';
+        console.error('Error:', error);
+        document.getElementById('hostResult').innerHTML =
+            '<p class="error">Error creating lobby. Please try again.</p>';
     });
 });
 
@@ -60,9 +62,9 @@ document.getElementById('joinLobbyBtn').addEventListener('click', function() {
     const joinLobbyId = document.getElementById('joinLobbyId').value;
 
     if (!joinName.trim() || !joinLobbyId.trim()) {
-    document.getElementById('joinResult').innerHTML =
-        '<p class="error">Please enter both your name and the lobby ID</p>';
-    return;
+        document.getElementById('joinResult').innerHTML =
+            '<p class="error">Please enter both your name and the lobby ID</p>';
+        return;
     }
 
     // Store the player and lobby information (player ID will be set when we get a response)
@@ -83,21 +85,25 @@ document.getElementById('joinLobbyBtn').addEventListener('click', function() {
     // We'll show these again if there's an error
     document.getElementById('hostSection').style.display = 'none';
     document.getElementById('joinSection').style.display = 'none';
+    
+    // Character selection will be shown in the lobby_joined handler if needed
 });
 
 
 // When the Start Game button is clicked
 document.getElementById('startGameBtn').addEventListener('click', function() {
     if (!isHost) {
-    document.getElementById('startGameResult').innerHTML =
-        '<p class="error">Only the host can start the game</p>';
-    return;
+        document.getElementById('startGameResult').innerHTML =
+            '<p class="error">Only the host can start the game</p>';
+        return;
     }
 
+    // Check if all players have selected characters (done in the characterSelection.js)
+    
     // Emit the start_game event
     socket.emit('start_game', {
-    lobby_id: currentLobbyId,
-    player_id: currentPlayerId
+        lobby_id: currentLobbyId,
+        player_id: currentPlayerId
     });
 });
 
@@ -154,4 +160,37 @@ document.getElementById('showCardBtn').addEventListener('click', function() {
 // When the Cannot Disprove button is clicked
 document.getElementById('cannotDisproveBtn').addEventListener('click', function() {
     cannotDisprove();
+});
+
+// Add character selection button event listeners when the DOM content is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers for character selection buttons
+    const characterCards = document.querySelectorAll('.character-card');
+    
+    characterCards.forEach(card => {
+        const selectButton = card.querySelector('.select-character-btn');
+        
+        selectButton.addEventListener('click', function() {
+            const characterName = card.getAttribute('data-character');
+            
+            if (!card.classList.contains('unavailable')) {
+                // Send character selection to server
+                socket.emit('select_character', {
+                    lobby_id: currentLobbyId,
+                    player_id: currentPlayerId,
+                    character_name: characterName
+                });
+                
+                // Update selected character locally (will be confirmed by server response)
+                selectedCharacter = characterName;
+                
+                // Update UI
+                characterCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                
+                document.getElementById('characterSelectionResult').innerHTML = 
+                    `<p class="success">You selected ${characterName}!</p>`;
+            }
+        });
+    });
 });
