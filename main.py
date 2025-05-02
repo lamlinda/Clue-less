@@ -1,6 +1,8 @@
 from flask import Flask, render_template
 from extensions import db, socketio
 from routes.lobby import lobby_bp
+import routes.handlePlayerActions
+from chat_handler import register_chat_handlers  # Make sure this file exists
 
 HOST = "0.0.0.0"
 PORT = 5000
@@ -13,6 +15,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///game.db'
 db.init_app(app)
 socketio.init_app(app)
 
+# Register chat handlers
+register_chat_handlers(socketio)  # Add this line to register the chat handlers
+
 with app.app_context():
     db.create_all()
 
@@ -21,10 +26,7 @@ def test():
     return render_template('webLayout.html')
 
 
-
 app.register_blueprint(lobby_bp, url_prefix='/lobby')
-
-
 
 
 if __name__ == '__main__':
