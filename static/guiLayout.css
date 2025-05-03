@@ -106,6 +106,8 @@ input {
 
 .room {
   background-color: #fff;
+  background-size: contain;         /* Or use 'cover' if you want it to fill */
+  background-position: center;
   border: 2px solid #333;
   display: flex;
   flex-direction: column;
@@ -113,8 +115,12 @@ input {
   align-items: center;
   text-align: center;
   font-weight: bold;
+  color: white;
+  font-size: 0.9em; /* or try 0.85em if still too large */
+  text-shadow: 1px 1px 2px black, -1px -1px 2px black;
   position: relative;
   padding: 5px;
+
 }
 
 .hallway {
@@ -166,15 +172,15 @@ input {
 .character-plum { background-color: #990099; }
 
 /* Grid positions for rooms */
-#study { grid-column: 1; grid-row: 2; }
-#hall { grid-column: 3; grid-row: 2; }
-#lounge { grid-column: 5; grid-row: 2; }
-#library { grid-column: 1; grid-row: 4; }
-#billiard { grid-column: 3; grid-row: 4; }
-#dining { grid-column: 5; grid-row: 4; }
-#conservatory { grid-column: 1; grid-row: 6; }
-#ballroom { grid-column: 3; grid-row: 6; }
-#kitchen { grid-column: 5; grid-row: 6; }
+#study { grid-column: 1; grid-row: 2; background-image: url('/static/images/rooms/study.png'); }
+#hall { grid-column: 3; grid-row: 2; background-image: url('/static/images/rooms/hall.png'); }
+#lounge { grid-column: 5; grid-row: 2; background-image: url('/static/images/rooms/lounge.png'); }
+#library { grid-column: 1; grid-row: 4; background-image: url('/static/images/rooms/library.png'); }
+#billiard { grid-column: 3; grid-row: 4; background-image: url('/static/images/rooms/billiardRoom.png'); }
+#dining { grid-column: 5; grid-row: 4; background-image: url('/static/images/rooms/dining.png'); }
+#conservatory { grid-column: 1; grid-row: 6; background-image: url('/static/images/rooms/conservatory.png'); }
+#ballroom { grid-column: 3; grid-row: 6; background-image: url('/static/images/rooms/ballroom.png'); }
+#kitchen { grid-column: 5; grid-row: 6; background-image: url('/static/images/rooms/kitchen.png'); }
 
 /* Hallways */
 #study_hall { grid-column: 2; grid-row: 2; }
@@ -313,8 +319,10 @@ input {
 
 .card-title {
   font-weight: bold;
+  min-height: 2.5em;
   margin-bottom: 5px;
   font-size: 0.9em;
+  line-height: 1.2;
 }
 
 .card-type {
@@ -324,6 +332,14 @@ input {
   font-size: 0.7em;
   color: #666;
   font-style: italic;
+}
+
+.card-image {
+  width: 90px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 4px;
+  margin-bottom: 5px;
 }
 
 /* Suggestion/Accusation form styles */

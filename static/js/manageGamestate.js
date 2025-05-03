@@ -3,6 +3,44 @@
  * @description This file enforces game rules and manages the gamestate
  */
 
+// Maps card names to image filenames
+const cardImageMap = {
+    // Suspects
+    "Miss Scarlet": "MsScarlet.png",
+    "Colonel Mustard": "ColMustard.png",
+    "Mrs. White": "MrsWhite.png",
+    "Mr. Green": "MrGreen.png",
+    "Mrs. Peacock": "MrsPeacock.png",
+    "Professor Plum": "ProfPlum.png",
+  
+    // Weapons
+    "Candlestick": "candlestick.png",
+    "Knife": "knife.png",
+    "Lead Pipe": "leadPipe.png",
+    "Revolver": "revolver.png",
+    "Rope": "rope.png",
+    "Wrench": "wrench.png",
+  
+    // Rooms
+    "Kitchen": "kitchen.png",
+    "Ballroom": "ballroom.png",
+    "Conservatory": "conservatory.png",
+    "Dining Room": "dining.png",
+    "Lounge": "lounge.png",
+    "Hall": "hall.png",
+    "Study": "study.png",
+    "Library": "library.png",
+    "Billiard Room": "billiardRoom.png"
+  };
+
+  const cardDisplayNameMap = {
+    "Colonel Mustard": "Col. Mustard",
+    "Professor Plum": "Prof. Plum",
+    // Add more if needed
+  };
+  
+  
+
 // Listen for 'game_started' event
 socket.on('game_started', function(data) {
     console.log('Game started:', data);
@@ -105,30 +143,50 @@ function updateCardDisplay() {
     myCards.forEach(function(card) {
         const cardElement = document.createElement('div');
         cardElement.className = 'card';
-
-        // Determine the card type
+    
+        let cardType = 'room';
         if (['Miss Scarlet', 'Colonel Mustard', 'Mrs. White', 'Mr. Green', 'Mrs. Peacock', 'Professor Plum'].includes(card)) {
+            cardType = 'suspect';
             cardElement.classList.add('card-suspect');
-            cardElement.innerHTML = `
-            <div class="card-title">${card}</div>
-            <div class="card-type">Suspect</div>
-            `;
         } else if (['Candlestick', 'Knife', 'Lead Pipe', 'Revolver', 'Rope', 'Wrench', 'Dagger'].includes(card)) {
+            cardType = 'weapon';
             cardElement.classList.add('card-weapon');
-            cardElement.innerHTML = `
-            <div class="card-title">${card}</div>
-            <div class="card-type">Weapon</div>
-            `;
         } else {
             cardElement.classList.add('card-room');
-            cardElement.innerHTML = `
-            <div class="card-title">${card}</div>
-            <div class="card-type">Room</div>
-            `;
         }
+    
+        // Determine subfolder based on card type
+        const folder = {
+            suspect: 'suspects',
+            weapon: 'weapons',
+            room: 'rooms'
+        }[cardType];
+    
+        const filename = cardImageMap[card] || 'default.png';
+        const imageSrc = `/static/images/${folder}/${filename}`;
+    
+        const imageEl = document.createElement('img');
+        imageEl.src = imageSrc;
+        imageEl.alt = card;
+        imageEl.classList.add('card-image');
+    
+        const titleEl = document.createElement('div');
+        titleEl.className = 'card-title';
+        titleEl.textContent = cardDisplayNameMap[card] || card;
 
+    
+        const typeEl = document.createElement('div');
+        typeEl.className = 'card-type';
+        typeEl.textContent = cardType.charAt(0).toUpperCase() + cardType.slice(1);
+    
+        cardElement.appendChild(imageEl);
+        cardElement.appendChild(titleEl);
+        cardElement.appendChild(typeEl);
+    
         playerCards.appendChild(cardElement);
     });
+    
+    
 }
 
 
