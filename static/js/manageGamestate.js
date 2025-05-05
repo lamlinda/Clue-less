@@ -195,15 +195,22 @@ function updateCardDisplay() {
         cardElement.className = 'card';
     
         let cardType = 'room';
-        if (['Miss Scarlet', 'Colonel Mustard', 'Mrs. White', 'Mr. Green', 'Mrs. Peacock', 'Professor Plum'].includes(card)) {
-            cardType = 'suspect';
-            cardElement.classList.add('card-suspect');
-        } else if (['Candlestick', 'Knife', 'Lead Pipe', 'Revolver', 'Rope', 'Wrench', 'Dagger'].includes(card)) {
-            cardType = 'weapon';
-            cardElement.classList.add('card-weapon');
-        } else {
-            cardElement.classList.add('card-room');
-        }
+
+    const themeData = gameThemes[currentTheme];
+    if (themeData.characters.includes(card)) {
+    cardType = 'suspect';
+    cardElement.classList.add('card-suspect');
+    } else if (themeData.weapons.includes(card)) {
+    cardType = 'weapon';
+    cardElement.classList.add('card-weapon');
+    } else if (themeData.rooms.includes(card)) {
+    cardType = 'room';
+    cardElement.classList.add('card-room');
+    } else {
+    console.warn("Unrecognized card:", card);
+    cardElement.classList.add('card-room'); // Fallback
+    }
+
     
         // Determine subfolder based on card type
         const folder = {
