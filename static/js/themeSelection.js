@@ -247,6 +247,15 @@ const gameThemes = {
   }
 };
 
+const suspectImageMap = {
+  "Miss Scarlet": "MsScarlet.png",
+  "Colonel Mustard": "ColMustard.png",
+  "Mrs. White": "MrsWhite.png",
+  "Mr. Green": "MrGreen.png",
+  "Mrs. Peacock": "MrsPeacock.png",
+  "Professor Plum": "ProfPlum.png"
+};
+
 // Current selected theme
 let currentTheme = "classic";
 
@@ -427,14 +436,14 @@ function updateCharacterSelectionUI(theme) {
       const characterImage = card.querySelector('.character-image');
 
       if (characterImage) {
-        // Remove all color classes first
-        characterImage.classList.remove('scarlet', 'mustard', 'white', 'green', 'peacock', 'plum');
-
-        // Get the color for this character in this theme
-        const colorValue = themeCharacterColors[theme][character];
-        if (colorValue) {
-          // Set the background color directly based on theme
-          characterImage.style.backgroundColor = colorValue;
+        if (theme === 'classic' && suspectImageMap[character]) {
+          characterImage.style.backgroundImage = `url('/static/images/suspects/${suspectImageMap[character]}')`;
+          characterImage.style.backgroundSize = 'cover';
+          characterImage.style.backgroundColor = ''; // Remove solid color
+        } else {
+          characterImage.style.backgroundImage = ''; // Clear any previous image
+          const colorValue = themeCharacterColors[theme][character];
+          characterImage.style.backgroundColor = colorValue || '#ccc';
         }
       }
 
@@ -570,6 +579,16 @@ function updateGameBoardWithTheme() {
     if (element) {
       const themeName = theme.rooms[room.index];
       element.textContent = themeName;
+
+      // Only apply room images for classic theme
+      if (currentTheme === "classic") {
+        const roomId = room.id; // like "library"
+        element.style.backgroundImage = `url('/static/images/rooms/${roomId}.png')`;
+        element.style.backgroundSize = "cover";
+        element.style.backgroundPosition = "center";
+      } else {
+        element.style.backgroundImage = "none"; // clear any background image
+      }
 
       // Preserve the secret passage indicator if it exists
       const secretPassage = element.querySelector('.secret-passage');

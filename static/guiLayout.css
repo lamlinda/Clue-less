@@ -101,6 +101,11 @@ body {
     font-weight: bold;
     position: relative;
     padding: 5px;
+    background-size: contain;   
+    background-position: center;
+    color: white;
+    font-size: 0.9em; 
+    text-shadow: 1px 1px 2px black, -1px -1px 2px black;
   }
 
   .hallway {
@@ -287,8 +292,10 @@ body {
 
 .card-title {
     font-weight: bold;
+    min-height: 2.5em;
     margin-bottom: 5px;
     font-size: 0.9em;
+    line-height: 1.2;
 }
 
 .card-type {
@@ -310,6 +317,15 @@ body {
 .card-room .card-type {
     color: #4CAF50;
 }
+
+.card-image {
+  width: 90px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 4px;
+  margin-bottom: 5px;
+}
+
 
   /* Suggestion/Accusation form styles */
   .action-form {
@@ -402,6 +418,14 @@ body {
   background-size: contain;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+.character-image {
+  width: 100%;
+  height: 200px; 
+  background-size: cover;  
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
 .character-image.scarlet {
